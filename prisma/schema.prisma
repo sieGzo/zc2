@@ -1,0 +1,42 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  username         String   @unique
+  passwordHash     String
+  emailVerified    Boolean  @default(false)
+  emailToken       String?  @unique
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  name             String?
+  age              Int?
+  visitedCountries String[]
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  verified  Boolean  @default(false)
+}
+
+model Visit {
+  id        String   @id @default(cuid())
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+}

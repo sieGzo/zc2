@@ -1,0 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ogólny styl body */
+body {
+  @apply font-sans text-gray-800 bg-white dark:text-gray-200 dark:bg-gray-900;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Zapobiega problemom z przesuwaniem i skalowaniem */
+html, body {
+  width: 100%;
+  min-width: 320px;
+  max-width: 100vw;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%; /* iOS fix */
+  text-size-adjust: 100%;
+  touch-action: manipulation; /* lepsze zachowanie na mobilkach */
+}
+
+/* Dziedziczenie dostępności */
+* {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  box-sizing: border-box; /* Dobrze dodać dla spójności layoutu */
+}
+
+/* Animacja swing */
+@keyframes swing {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(10deg); }
+  50% { transform: rotate(0deg); }
+  75% { transform: rotate(-10deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.animate-swing {
+  animation: swing 1.5s ease-in-out infinite;
+}
+
+/* Ukrycie poziomego scrollbara */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Tryby dostępności */
+body.contrast {
+  background-color: #000 !important;
+  color: #fff !important;
+  filter: invert(100%) hue-rotate(180deg);
+}
+
+body.contrast img,
+body.contrast video,
+body.contrast picture,
+body.contrast svg,
+body.contrast canvas {
+  filter: invert(100%) hue-rotate(180deg);
+}
+
+body.large-font {
+  font-size: 22px;
+}
+
+body.letter-spacing {
+  letter-spacing: 0.075em;
+}
+
+body.font-alt {
+  font-family: 'Arial Rounded MT Bold', 'Segoe UI', sans-serif !important;
+}
+
+body.line-spacing {
+  line-height: 1.8 !important;
+}
+
+body.underline-links a {
+  text-decoration: underline !important;
+}
+
+/* Animacje do IntroVideo */
+@keyframes fadeIn1 {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn2 {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-20px); }
+}
+
+/* ✳️ Spowolnione animacje */
+.animate-fadeIn1 {
+  animation: fadeIn1 3s ease-out forwards; /* było 1s */
+}
+
+.animate-fadeIn2 {
+  animation: fadeIn2 4s ease-out forwards; /* było 1s */
+}
+
+.animate-fadeOut {
+  animation: fadeOut 5s ease-in forwards; /* było 1.5s */
+}
