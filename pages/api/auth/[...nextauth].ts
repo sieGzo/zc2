@@ -31,11 +31,9 @@ export default NextAuth({
         try {
           if (!credentials?.email || !credentials?.password) return null
           const identifier = String(credentials.email).trim().toLowerCase()
-          const user = await prisma.user.findFirst({
-            where: { OR: [{ email: identifier }, { username: credentials.email }] },
-          })
+          const user = await prisma.user.findFirst({ where: { OR: [{ email: identifier }, { username: credentials.email }] } })
           if (!user || !user.passwordHash) return null
-          if (!user.emailVerified) throw new Error('EmailNotVerified') // wymagamy potwierdzenia e-maila
+          if (!user.emailVerified) throw new Error('EmailNotVerified')
           const ok = await bcrypt.compare(credentials.password, user.passwordHash)
           if (!ok) return null
           return { id: user.id, email: user.email, name: user.username }
@@ -53,14 +51,10 @@ export default NextAuth({
     async redirect({ url, baseUrl }) {
       try {
         const u = new URL(url, baseUrl)
-        // Nigdy nie wracaj na /login
         if (u.pathname.startsWith('/login')) return baseUrl + '/'
-        // Tylko ten sam origin
         if (u.origin === baseUrl) return u.toString()
         return baseUrl + '/'
-      } catch {
-        return baseUrl + '/'
-      }
+      } catch { return baseUrl + '/' }
     },
     async session({ session, token }) {
       if (token?.sub) (session.user as any).id = token.sub

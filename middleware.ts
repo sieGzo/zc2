@@ -10,7 +10,8 @@ function isPublic(path: string) {
     path.startsWith('/api/auth') ||
     path.startsWith('/_next') ||
     path === '/favicon.ico' ||
-    path.startsWith('/images')
+    path.startsWith('/images') ||
+    path.startsWith('/public')
   ) return true
   return false
 }
@@ -19,7 +20,16 @@ export function middleware(req: NextRequest) {
   const url = req.nextUrl
   const pathname = url.pathname
 
-  // A) Utnij callbackUrl jeśli kieruje na /login albo na '/'
+  // 0) Twarde odcięcie: /api/auth/signin (bez providera) -> /login (bez callbackUrl)
+  if (pathname === '/api/auth/signin') {
+    const ref = req.headers.get('referer') || 'direct'
+    console.log('[MW] /api/auth/signin hit from', ref)
+    url.pathname = '/login'
+    url.searchParams.delete('callbackUrl')
+    return NextResponse.redirect(url)
+  }
+
+  // 1) Utnij szkodliwy callbackUrl (na /login lub '/')
   const cb = url.searchParams.get('callbackUrl')
   if (cb) {
     try {
@@ -40,13 +50,13 @@ export function middleware(req: NextRequest) {
     req.cookies.has('next-auth.session-token') ||
     req.cookies.has('__Secure-next-auth.session-token')
 
-  // B) Zalogowany użytkownik nie powinien siedzieć na /login
+  // 2) Zalogowany użytkownik nie powinien zostawać na /login
   if (pathname === '/login' && hasSession) {
-    const to = new URL('/', url.origin) // zmień na '/profil' jeśli wolisz
+    const to = new URL('/', url.origin) // zmień na '/profil' jeśli chcesz
     return NextResponse.redirect(to)
   }
 
-  // C) Lekka ochrona stron prywatnych (poza publicznymi)
+  // 3) Lekka ochrona prywatnych stron (zostawiamy publiczne)
   if (!isPublic(pathname) && !hasSession) {
     const to = new URL('/login', url.origin)
     to.searchParams.set('callbackUrl', pathname + url.search)

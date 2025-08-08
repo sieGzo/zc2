@@ -1,14 +1,7 @@
 // hooks/useAuth.ts
 import { signIn, signOut, useSession } from "next-auth/react"
 
-type User = {
-  username?: string
-  id?: string
-  age?: number
-  email?: string
-  image?: string
-}
-
+type User = { username?: string; id?: string; age?: number; email?: string; image?: string }
 interface AuthContextType {
   user: User | null
   login: (provider?: string, opts?: Record<string, any>) => void
@@ -37,21 +30,12 @@ export function useAuth(): AuthContextType {
   }
 
   const logout = () => signOut({ callbackUrl: "/" })
-
   const updateUser = (_data: Partial<User>) => {}
 
   return {
     user: session?.user
-      ? {
-          username: (session.user as any).username || session.user.name || "",
-          id: (session.user as any).id || "",
-          age: (session.user as any).age,
-          email: session.user.email || "",
-          image: session.user.image || "",
-        }
+      ? { username: (session.user as any).username || session.user.name || "", id: (session.user as any).id || "", age: (session.user as any).age, email: session.user.email || "", image: session.user.image || "" }
       : null,
-    login,
-    logout,
-    updateUser,
+    login, logout, updateUser,
   }
 }
