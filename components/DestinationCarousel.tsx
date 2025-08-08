@@ -16,55 +16,47 @@ export default function DestinationCarousel() {
   const hasMounted = useRef(false)
   const [index, setIndex] = useState(0)
 
-  // Automatyczna zmiana indeksu co 5 sekund
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIndex((prev) => (prev + 1) % destinations.length)
-    }, 5000)
-
-    return () => clearInterval(interval)
-  }, [])
-
-  // Przewijanie do elementu po zmianie indeksu (z pominięciem pierwszego renderu)
   useEffect(() => {
     if (!hasMounted.current) {
       hasMounted.current = true
       return
     }
-
     const el = ref.current
-    const card = el?.children[index] as HTMLElement
+    const card = el?.children[index] as HTMLElement | undefined
     if (card) {
-      card.scrollIntoView({
-        behavior: 'smooth',
-        inline: 'center',
-        block: 'nearest' // 👈 ZAPOBIEGA przewijaniu w pionie!
+      requestAnimationFrame(() => {
+        card.scrollIntoView({
+          behavior: 'smooth',
+          inline: 'center',
+          block: 'nearest',
+        })
       })
     }
   }, [index])
 
-  const scrollToIndex = (i: number) => {
-    setIndex(i) // Sam useEffect zajmie się przewinięciem
-  }
-
-  const prev = () => scrollToIndex(index === 0 ? destinations.length - 1 : index - 1)
-  const next = () => scrollToIndex((index + 1) % destinations.length)
+  const prev = () => setIndex((i) => Math.max(0, i - 1))
+  const next = () => setIndex((i) => Math.min(destinations.length - 1, i + 1))
+  const scrollToIndex = (i: number) => setIndex(i)
 
   return (
-    <div className="relative">
-      <button
-        onClick={prev}
-        className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 bg-white dark:bg-gray-800 rounded-full shadow hover:bg-gray-100 dark:hover:bg-gray-700 transition hidden md:block"
-      >
-        <ChevronLeft className="text-[#f1861e]" />
-      </button>
-      <button
-        onClick={next}
-        className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 bg-white dark:bg-gray-800 rounded-full shadow hover:bg-gray-100 dark:hover:bg-gray-700 transition hidden md:block"
-      >
-        <ChevronRight className="text-[#f1861e]" />
-      </button>
-
+    <div className="max-w-6xl mx-auto my-10">
+      <div className="flex items-center justify-between px-4">
+        <button
+          className="p-2 rounded-full border hover:bg-gray-50 dark:hover:bg-gray-800"
+          aria-label="Poprzedni"
+          onClick={prev}
+        >
+          <ChevronLeft />
+        </button>
+        <h3 className="text-2xl font-bold">Pomysły na kierunki</h3>
+        <button
+          className="p-2 rounded-full border hover:bg-gray-50 dark:hover:bg-gray-800"
+          aria-label="Następny"
+          onClick={next}
+        >
+          <ChevronRight />
+        </button>
+      </div>
       <div
         ref={ref}
         className="flex gap-6 px-4 py-6 overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar"
@@ -72,7 +64,8 @@ export default function DestinationCarousel() {
         {destinations.map((dest, i) => (
           <div
             key={i}
-            className="snap-center shrink-0 w-[80vw] sm:w-[300px] bg-gradient-to-br from-orange-100 via-white to-orange-50 dark:from-gray-800 dark:to-gray-700 p-6 rounded-xl shadow-lg text-center transition-transform duration-300 hover:scale-[1.03]"
+            onClick={() => scrollToIndex(i)}
+            className="snap-center shrink-0 w-[80vw] sm:w-[300px] bg-white dark:bg-gray-800 p-6 rounded-xl shadow text-center transition-transform duration-300 hover:scale-[1.03] cursor-pointer"
           >
             <h4
               className="text-xl font-bold mb-3 text-[#f1861e]"

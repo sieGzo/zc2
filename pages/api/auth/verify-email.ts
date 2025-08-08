@@ -20,14 +20,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const alreadyVerifiedUser = await prisma.user.findFirst({
         where: {
           emailToken: null,
-          emailVerified: true,
+          emailVerified: new Date(),
         },
       })
 
       if (alreadyVerifiedUser) {
         return res.status(200).json({
           message: 'E-mail był już wcześniej potwierdzony.',
-          emailVerified: true,
+          emailVerified: new Date(),
         })
       }
 
@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        emailVerified: true,
+        emailVerified: new Date(),
         emailToken: null,
       },
     })
@@ -54,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({
       message: 'E-mail potwierdzony!',
-      emailVerified: true,
+      emailVerified: new Date(),
     })
   } catch (error) {
     console.error('❌ Błąd przy weryfikacji e-maila:', error)

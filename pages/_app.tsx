@@ -3,7 +3,6 @@ import '../styles/globals.css'
 import type { AppProps } from 'next/app'
 import { useEffect } from 'react'
 import { SessionProvider } from 'next-auth/react'
-import { AuthProvider } from '../hooks/useAuth'
 import SessionSync from '../components/SessionSync'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -16,13 +15,11 @@ export default function MyApp({ Component, pageProps }: AppProps) {
   }, [])
 
   return (
-    <SessionProvider session={pageProps.session}>
-      <AuthProvider>
-        <SessionSync />
-        <Navbar />
-        <Component {...pageProps} />
-        <Footer />
-      </AuthProvider>
+    <SessionProvider session={(pageProps as any).session}>
+      <SessionSync />
+      <Navbar />
+      <Component {...pageProps} />
+      <Footer />
     </SessionProvider>
   )
 }

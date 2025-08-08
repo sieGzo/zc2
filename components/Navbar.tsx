@@ -19,7 +19,7 @@ export default function Navbar() {
   return (
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm relative z-[100] overflow-visible">
       <div className="w-full max-w-screen-xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4">
-        {/* Logo + napis */}
+        {/* Logo */}
         <Link href="/" className="flex items-center gap-2 flex-shrink-0">
           <Image
             src="/logo.png"
@@ -35,11 +35,10 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Ikony dostępności i motywu */}
+        {/* Access buttons */}
         <div className="flex items-center gap-4 absolute top-4 right-4 md:static md:ml-auto z-[110]">
           <ThemeToggle />
           <AccessPanel />
-          {/* Burger menu */}
           <button onClick={toggleMenu} className="md:hidden text-[#f1861e] focus:outline-none">
             {isOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
@@ -82,7 +81,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Menu mobile */}
       {isOpen && (
         <div className="absolute top-full left-0 w-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-md px-4 pb-6 pt-4 space-y-3 text-center shadow-md transition-all duration-300 z-[90]">
           <Link href="/" onClick={closeMenu} className="block text-gray-800 dark:text-gray-200 hover:underline">Strona główna</Link>

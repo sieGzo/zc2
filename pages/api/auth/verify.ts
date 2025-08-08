@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        emailVerified: true,
+        emailVerified: new Date(),
         emailToken: null,
       },
     })

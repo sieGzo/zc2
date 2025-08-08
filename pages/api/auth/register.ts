@@ -77,7 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         email,
         passwordHash, // <--- poprawione
         emailToken: token,
-        emailVerified: false,
+        emailVerified: null,
       },
     })
 
