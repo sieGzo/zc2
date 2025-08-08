@@ -1,24 +1,13 @@
-// components/SessionSync.tsx
+// components/SessionSync.tsx — no redirects, just exposes status changes
 'use client'
-
 import { useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { useAuth } from '../hooks/useAuth'
 
 export default function SessionSync() {
-  const { data: session } = useSession()
-  const { login } = useAuth()
-
+  const { status } = useSession()
   useEffect(() => {
-    if (session?.user) {
-      login({
-        id: session.user.id || '',
-        username: session.user.name || session.user.email?.split('@')[0] || 'Użytkownik',
-        email: session.user.email || '',
-        visitedCountries: [], // Dodasz potem z bazy, jeśli chcesz
-      })
-    }
-  }, [session, login])
-
+    // Optional: emit custom event for app state; no router.push here
+    window.dispatchEvent(new CustomEvent('auth:status', { detail: status }))
+  }, [status])
   return null
 }

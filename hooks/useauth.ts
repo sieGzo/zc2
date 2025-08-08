@@ -1,41 +1,26 @@
-// hooks/useAuth.ts
-import { signIn, signOut, useSession } from "next-auth/react"
+// hooks/useAuth.ts — next-auth wrapper with loading flag
+import { useSession, signIn, signOut } from 'next-auth/react'
 
-type User = { username?: string; id?: string; age?: number; email?: string; image?: string }
-interface AuthContextType {
-  user: User | null
-  login: (provider?: string, opts?: Record<string, any>) => void
-  logout: () => void
-  updateUser: (data: Partial<User>) => void
-}
-
-export function useAuth(): AuthContextType {
-  const { data: session } = useSession()
+export function useAuth() {
+  const { data: session, status } = useSession()
 
   const getSafeCallback = () => {
-    if (typeof window === "undefined") return "/"
+    if (typeof window === 'undefined') return '/'
     const params = new URLSearchParams(window.location.search)
-    const cb = params.get("callbackUrl") || "/"
+    const cb = params.get('callbackUrl') || '/'
     try {
-      const url = new URL(cb, window.location.origin)
-      return url.pathname.startsWith("/login") ? "/" : url.toString()
+      const u = new URL(cb, window.location.origin)
+      return u.pathname.startsWith('/login') ? '/' : u.toString()
     } catch {
-      return !cb || cb.includes("/login") ? "/" : cb
+      return !cb || cb.includes('/login') ? '/' : cb
     }
   }
 
-  const login = (provider: string = "credentials", opts: Record<string, any> = {}) => {
-    const callbackUrl = getSafeCallback()
-    return signIn(provider, { callbackUrl, ...opts })
-  }
-
-  const logout = () => signOut({ callbackUrl: "/" })
-  const updateUser = (_data: Partial<User>) => {}
-
   return {
-    user: session?.user
-      ? { username: (session.user as any).username || session.user.name || "", id: (session.user as any).id || "", age: (session.user as any).age, email: session.user.email || "", image: session.user.image || "" }
-      : null,
-    login, logout, updateUser,
+    user: status === 'authenticated' ? session?.user ?? null : null,
+    loading: status === 'loading',
+    login: (provider: 'credentials'|'google'|'facebook' = 'credentials', opts: Record<string, any> = {}) =>
+      signIn(provider, { callbackUrl: getSafeCallback(), ...opts }),
+    logout: () => signOut({ callbackUrl: '/' }),
   }
 }
