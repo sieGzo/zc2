@@ -11,25 +11,36 @@ type User = {
 
 interface AuthContextType {
   user: User | null
-  login: (provider?: string) => void
+  login: (provider?: string, opts?: Record<string, any>) => void
   logout: () => void
   updateUser: (data: Partial<User>) => void
 }
 
-export const useAuth = (): AuthContextType => {
+export function useAuth(): AuthContextType {
   const { data: session } = useSession()
 
-  const login = (provider?: string) => {
-    signIn(provider) // jeśli brak providera → strona logowania
+  // Bezpieczny callbackUrl – jeśli wskazuje na /login, zwróć "/"
+  const getSafeCallback = () => {
+    if (typeof window === "undefined") return "/"
+    const params = new URLSearchParams(window.location.search)
+    const cb = params.get("callbackUrl") || "/"
+    try {
+      const url = new URL(cb, window.location.origin)
+      return url.pathname.startsWith("/login") ? "/" : url.toString()
+    } catch {
+      return cb.includes("/login") ? "/" : cb
+    }
   }
 
-  const logout = () => {
-    signOut()
+  const login = (provider: string = "credentials", opts: Record<string, any> = {}) => {
+    const callbackUrl = getSafeCallback()
+    return signIn(provider, { callbackUrl, ...opts })
   }
 
-  const updateUser = (data: Partial<User>) => {
-    console.log("Update user:", data)
-    // w przyszłości możesz tu dodać request do API
+  const logout = () => signOut({ callbackUrl: "/" })
+
+  const updateUser = (_data: Partial<User>) => {
+    // placeholder na później
   }
 
   return {

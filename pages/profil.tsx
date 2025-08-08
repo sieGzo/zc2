@@ -12,7 +12,7 @@ export default function ProfilPage() {
 
   useEffect(() => {
     if (!user) {
-      router.push('/login?redirect=/profil')
+      router.push('/login?callbackUrl=' + encodeURIComponent('/profil'))
     }
   }, [user])
 

@@ -14,31 +14,58 @@ export default NextAuth({
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking: true, // podpinanie kont po tym samym mailu
     }),
     FacebookProvider({
       clientId: process.env.FACEBOOK_CLIENT_ID!,
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking: true,
     }),
     CredentialsProvider({
       name: 'credentials',
-      credentials: { email: { label: 'Email', type: 'email' }, password: { label: 'Password', type: 'password' } },
+      credentials: {
+        email: { label: 'Email lub nazwa użytkownika', type: 'text' },
+        password: { label: 'Hasło', type: 'password' },
+      },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null
-        const user = await prisma.user.findUnique({ where: { email: credentials.email } })
-        if (!user || !user.passwordHash) return null
-        const ok = await bcrypt.compare(credentials.password, user.passwordHash)
-        if (!ok) return null
-        return { id: user.id, email: user.email, name: user.username }
+        try {
+          if (!credentials?.email || !credentials?.password) return null
+          const identifier = String(credentials.email).trim().toLowerCase()
+
+          const user = await prisma.user.findFirst({
+            where: {
+              OR: [{ email: identifier }, { username: credentials.email }],
+            },
+          })
+          if (!user || !user.passwordHash) return null
+
+          // Wymagamy potwierdzenia e-maila przed logowaniem
+          if (!user.emailVerified) {
+            throw new Error('EmailNotVerified')
+          }
+
+          const ok = await bcrypt.compare(credentials.password, user.passwordHash)
+          if (!ok) return null
+          return { id: user.id, email: user.email, name: user.username }
+        } catch (e: any) {
+          if (e?.message === 'EmailNotVerified') {
+            // NextAuth pokaże error=EmailNotVerified w query
+            throw new Error('EmailNotVerified')
+          }
+          console.error('authorize error:', e)
+          return null
+        }
       },
     }),
   ],
   session: { strategy: 'jwt' },
+  pages: { signIn: '/login' },
   callbacks: {
     async session({ session, token }) {
       if (token?.sub) (session.user as any).id = token.sub
       return session
     },
   },
-  pages: { signIn: '/login' },
   secret: process.env.NEXTAUTH_SECRET,
+  debug: false,
 })
