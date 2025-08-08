@@ -5,8 +5,7 @@ export default function Document() {
   return (
     <Html lang="pl">
       <Head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="icon" href="/favicon.png" type="image/png" />
+<link rel="icon" href="/favicon.png" type="image/png" />
         <noscript>
           <style>{`body { overflow-x: hidden !important; }`}</style>
         </noscript>

@@ -65,7 +65,6 @@ export default function RegisterPage() {
       if (res.ok) {
         setSuccess(true)
 
-        // (opcjonalnie) newsletter
         if (subscribe) {
           const name = (nickname || form.username || form.email.split('@')[0]).trim()
           try {
@@ -77,7 +76,6 @@ export default function RegisterPage() {
           } catch {}
         }
 
-        // Bez auto-logowania – wymagamy potwierdzenia e-maila
         router.push('/potwierdz-email-wyslany')
       } else {
         setMessage(data.message || 'Wystąpił błąd podczas rejestracji.')
@@ -158,11 +156,7 @@ export default function RegisterPage() {
             className="self-center"
           />
 
-          <button
-            type="submit"
-            disabled={loading}
-            className={`bg-[#f1861e] text-white py-2 rounded transition ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-orange-600'}`}
-          >
+          <button type="submit" disabled={loading} className={`bg-[#f1861e] text-white py-2 rounded transition ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-orange-600'}`}>
             {loading ? 'Rejestruję...' : 'Zarejestruj się'}
           </button>
         </form>
@@ -175,18 +169,8 @@ export default function RegisterPage() {
         </p>
 
         <div className="mt-6 flex flex-col gap-2 text-center">
-          <button
-            onClick={() => signIn('google', { callbackUrl: '/' })}
-            className="bg-red-600 text-white py-2 rounded hover:bg-red-700"
-          >
-            Zaloguj się przez Google
-          </button>
-          <button
-            onClick={() => signIn('facebook', { callbackUrl: '/' })}
-            className="bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-          >
-            Zaloguj się przez Facebook
-          </button>
+          <button onClick={() => signIn('google', { callbackUrl: '/' })} className="bg-red-600 text-white py-2 rounded hover:bg-red-700">Zaloguj się przez Google</button>
+          <button onClick={() => signIn('facebook', { callbackUrl: '/' })} className="bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Zaloguj się przez Facebook</button>
         </div>
       </main>
     </>

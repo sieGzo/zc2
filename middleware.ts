@@ -2,54 +2,55 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// Ścieżki publiczne – bez wymogu sesji
-const PUBLIC_PATHS = new Set([
-  '/', '/login', '/about', '/contact', '/offers', '/articles', '/places', '/trails',
-])
+const PUBLIC = ['/', '/login', '/about', '/contact', '/offers', '/articles', '/places', '/trails']
 
-function isPublicPath(pathname: string) {
-  if (PUBLIC_PATHS.has(pathname)) return true
+function isPublic(path: string) {
+  if (PUBLIC.includes(path)) return true
   if (
-    pathname.startsWith('/api/auth') ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/images') ||
-    pathname === '/favicon.ico'
+    path.startsWith('/api/auth') ||
+    path.startsWith('/_next') ||
+    path === '/favicon.ico' ||
+    path.startsWith('/images')
   ) return true
   return false
 }
 
 export function middleware(req: NextRequest) {
-  const { nextUrl, cookies } = req
+  const url = req.nextUrl
+  const pathname = url.pathname
 
-  // 1) Ucinamy pętlę: jeśli callbackUrl celuje w /login → zamień na '/'
-  const cb = nextUrl.searchParams.get('callbackUrl')
+  // A) Utnij callbackUrl jeśli kieruje na /login albo na '/'
+  const cb = url.searchParams.get('callbackUrl')
   if (cb) {
     try {
-      const u = new URL(cb, nextUrl.origin)
-      if (u.pathname.startsWith('/login')) {
-        nextUrl.searchParams.set('callbackUrl', '/')
-        return NextResponse.redirect(nextUrl)
+      const u = new URL(cb, url.origin)
+      if (u.pathname.startsWith('/login') || u.pathname === '/') {
+        url.searchParams.delete('callbackUrl')
+        return NextResponse.redirect(url)
       }
     } catch {
-      if (cb.includes('/login')) {
-        nextUrl.searchParams.set('callbackUrl', '/')
-        return NextResponse.redirect(nextUrl)
+      if (cb === '/' || cb.includes('/login')) {
+        url.searchParams.delete('callbackUrl')
+        return NextResponse.redirect(url)
       }
     }
   }
 
-  // 2) Przykład „lekkiej” ochrony prywatnych stron (opcjonalnie)
-  //    Jeżeli dodasz pełny auth-guard, rozpoznaj sesję po ciasteczku next-auth.session-token
-  const pathname = nextUrl.pathname
-  if (!isPublicPath(pathname)) {
-    const hasSession =
-      cookies.has('next-auth.session-token') || // dev
-      cookies.has('__Secure-next-auth.session-token') // prod https
-    if (!hasSession) {
-      const url = new URL('/login', nextUrl.origin)
-      url.searchParams.set('callbackUrl', nextUrl.pathname + nextUrl.search)
-      return NextResponse.redirect(url)
-    }
+  const hasSession =
+    req.cookies.has('next-auth.session-token') ||
+    req.cookies.has('__Secure-next-auth.session-token')
+
+  // B) Zalogowany użytkownik nie powinien siedzieć na /login
+  if (pathname === '/login' && hasSession) {
+    const to = new URL('/', url.origin) // zmień na '/profil' jeśli wolisz
+    return NextResponse.redirect(to)
+  }
+
+  // C) Lekka ochrona stron prywatnych (poza publicznymi)
+  if (!isPublic(pathname) && !hasSession) {
+    const to = new URL('/login', url.origin)
+    to.searchParams.set('callbackUrl', pathname + url.search)
+    return NextResponse.redirect(to)
   }
 
   return NextResponse.next()

@@ -19,7 +19,6 @@ interface AuthContextType {
 export function useAuth(): AuthContextType {
   const { data: session } = useSession()
 
-  // Bezpieczny callbackUrl – jeśli wskazuje na /login, zwróć "/"
   const getSafeCallback = () => {
     if (typeof window === "undefined") return "/"
     const params = new URLSearchParams(window.location.search)
@@ -28,7 +27,7 @@ export function useAuth(): AuthContextType {
       const url = new URL(cb, window.location.origin)
       return url.pathname.startsWith("/login") ? "/" : url.toString()
     } catch {
-      return cb.includes("/login") ? "/" : cb
+      return !cb || cb.includes("/login") ? "/" : cb
     }
   }
 
@@ -39,9 +38,7 @@ export function useAuth(): AuthContextType {
 
   const logout = () => signOut({ callbackUrl: "/" })
 
-  const updateUser = (_data: Partial<User>) => {
-    // placeholder na później
-  }
+  const updateUser = (_data: Partial<User>) => {}
 
   return {
     user: session?.user

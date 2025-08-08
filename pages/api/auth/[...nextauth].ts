@@ -14,7 +14,7 @@ export default NextAuth({
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      allowDangerousEmailAccountLinking: true, // podpinanie kont po tym samym mailu
+      allowDangerousEmailAccountLinking: true,
     }),
     FacebookProvider({
       clientId: process.env.FACEBOOK_CLIENT_ID!,
@@ -31,27 +31,16 @@ export default NextAuth({
         try {
           if (!credentials?.email || !credentials?.password) return null
           const identifier = String(credentials.email).trim().toLowerCase()
-
           const user = await prisma.user.findFirst({
-            where: {
-              OR: [{ email: identifier }, { username: credentials.email }],
-            },
+            where: { OR: [{ email: identifier }, { username: credentials.email }] },
           })
           if (!user || !user.passwordHash) return null
-
-          // Wymagamy potwierdzenia e-maila przed logowaniem
-          if (!user.emailVerified) {
-            throw new Error('EmailNotVerified')
-          }
-
+          if (!user.emailVerified) throw new Error('EmailNotVerified') // wymagamy potwierdzenia e-maila
           const ok = await bcrypt.compare(credentials.password, user.passwordHash)
           if (!ok) return null
           return { id: user.id, email: user.email, name: user.username }
         } catch (e: any) {
-          if (e?.message === 'EmailNotVerified') {
-            // NextAuth pokaże error=EmailNotVerified w query
-            throw new Error('EmailNotVerified')
-          }
+          if (e?.message === 'EmailNotVerified') throw e
           console.error('authorize error:', e)
           return null
         }
@@ -61,6 +50,18 @@ export default NextAuth({
   session: { strategy: 'jwt' },
   pages: { signIn: '/login' },
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      try {
+        const u = new URL(url, baseUrl)
+        // Nigdy nie wracaj na /login
+        if (u.pathname.startsWith('/login')) return baseUrl + '/'
+        // Tylko ten sam origin
+        if (u.origin === baseUrl) return u.toString()
+        return baseUrl + '/'
+      } catch {
+        return baseUrl + '/'
+      }
+    },
     async session({ session, token }) {
       if (token?.sub) (session.user as any).id = token.sub
       return session
