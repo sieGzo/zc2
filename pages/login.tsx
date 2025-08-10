@@ -10,6 +10,7 @@ const errorMessages: Record<string, string> = {
   CredentialsSignin: "Nieprawidłowe dane logowania.",
   OAuthSignin: "Błąd logowania przez dostawcę.",
   OAuthCallback: "Błąd podczas autoryzacji dostawcy.",
+  Callback: "Błąd autoryzacji dostawcy.",            // ⬅️ DODANE
   OAuthAccountNotLinked: "To konto jest już powiązane z inną metodą logowania.",
   AccessDenied: "Dostęp zabroniony.",
   Configuration: "Błąd konfiguracji logowania.",
@@ -23,7 +24,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // „Bezpieczny” callbackUrl — nigdy nie wracamy na /login
   const safeCallbackUrl = useMemo(() => {
     const raw = typeof router.query.callbackUrl === "string" ? router.query.callbackUrl : "/"
     try {
@@ -34,16 +34,12 @@ export default function Login() {
     }
   }, [router.query.callbackUrl])
 
-  // Przechwycenie błędów NextAuth z ?error=... i komunikat „verified”
   useEffect(() => {
     if (typeof router.query.error === "string") {
       const msg = errorMessages[router.query.error] || errorMessages.default
       setError(msg)
     }
-    // jeśli wracamy z weryfikacji e-maila
-    if (router.query.verified === "1") {
-      setError(null)
-    }
+    if (router.query.verified === "1") setError(null)
   }, [router.query.error, router.query.verified])
 
   const handleCredentials = async (e: React.FormEvent) => {
@@ -63,9 +59,7 @@ export default function Login() {
         setError(msg)
         return
       }
-      if (res?.url) {
-        router.push(res.url)
-      }
+      if (res?.url) router.push(res.url)
     } finally {
       setLoading(false)
     }
@@ -89,7 +83,7 @@ export default function Login() {
           <input
             value={emailOrUsername}
             onChange={(e) => { setEmailOrUsername(e.target.value); setError(null) }}
-            className="w-full border rounded p-2"
+            className="w-full border rounded p-2 form-contrast"   // ⬅️ klasa kontrastu
             required
             autoComplete="username"
           />
@@ -100,7 +94,7 @@ export default function Login() {
             type="password"
             value={password}
             onChange={(e) => { setPassword(e.target.value); setError(null) }}
-            className="w-full border rounded p-2"
+            className="w-full border rounded p-2 form-contrast"   // ⬅️ klasa kontrastu
             required
             autoComplete="current-password"
           />
@@ -111,29 +105,17 @@ export default function Login() {
       </form>
 
       <div className="mt-4 text-center text-sm space-y-1">
-        <p>
-          Nie masz konta?{" "}
-          <Link href="/register" className="text-[#f1861e] underline">Zarejestruj się</Link>
-        </p>
-        <p>
-          Zapomniałeś hasła?{" "}
-          <Link href="/reset-hasla" className="underline">Zresetuj</Link>
-        </p>
+        <p>Nie masz konta? <Link href="/register" className="text-[#f1861e] underline">Zarejestruj się</Link></p>
+        <p>Zapomniałeś hasła? <Link href="/reset-hasla" className="underline">Zresetuj</Link></p>
       </div>
 
       <hr className="my-6" />
 
       <div className="space-y-3">
-        <button
-          onClick={() => signIn("google", { callbackUrl: safeCallbackUrl })}
-          className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg"
-        >
+        <button onClick={() => signIn("google", { callbackUrl: safeCallbackUrl })} className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg">
           Zaloguj przez Google
         </button>
-        <button
-          onClick={() => signIn("facebook", { callbackUrl: safeCallbackUrl })}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
-        >
+        <button onClick={() => signIn("facebook", { callbackUrl: safeCallbackUrl })} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg">
           Zaloguj przez Facebook
         </button>
       </div>

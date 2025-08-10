@@ -3,33 +3,40 @@ import Head from 'next/head'
 
 export default function ResetHaslaPage() {
   const [email, setEmail] = useState('')
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setLoading(true)
+    setMessage(null)
 
-    const res = await fetch('/api/auth/reset-password-request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    })
-
-    const data = await res.json()
-    if (res.ok) {
+    try {
+      const res = await fetch('/api/auth/reset-password-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      // niezależnie od statusu – pokazujemy neutralny komunikat
+      const data = await res.json().catch(() => ({}))
       setSuccess(true)
+      setMessage(data?.message || 'Jeśli konto istnieje, wysłano e-mail.')
+    } catch {
+      setSuccess(true)
+      setMessage('Jeśli konto istnieje, wysłano e-mail.')
+    } finally {
+      setLoading(false)
     }
-    setMessage(data.message)
   }
 
   return (
     <main className="max-w-md mx-auto mt-20 p-6 border rounded-lg bg-white dark:bg-gray-800 shadow text-center">
-	<Head>
-	  <title>Reset hasła – Zwiedzaj Chytrze</title>
-	</Head>
+      <Head><title>Reset hasła – Zwiedzaj Chytrze</title></Head>
       <h1 className="text-2xl font-bold text-[#f1861e] mb-4">Resetowanie hasła</h1>
+
       {success ? (
-        <p className="text-green-600">{message}</p>
+        <p className="text-green-600 dark:text-green-400">{message}</p>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
@@ -38,17 +45,16 @@ export default function ResetHaslaPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-2 border rounded bg-white dark:bg-gray-900 dark:text-white"
+            className="w-full p-2 border rounded form-contrast"
+            autoComplete="email"
           />
-          <button
-            type="submit"
-            className="bg-[#f1861e] text-white py-2 rounded w-full"
-          >
-            Wyślij link do resetu
+          <button type="submit" disabled={loading} className="bg-[#f1861e] text-white py-2 rounded w-full">
+            {loading ? 'Wysyłanie…' : 'Wyślij link do resetu'}
           </button>
         </form>
       )}
-      {message && !success && (
+
+      {!success && message && (
         <p className="mt-4 text-sm text-red-500">{message}</p>
       )}
     </main>
