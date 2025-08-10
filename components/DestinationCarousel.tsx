@@ -1,5 +1,4 @@
 'use client'
-
 import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -17,21 +16,10 @@ export default function DestinationCarousel() {
   const [index, setIndex] = useState(0)
 
   useEffect(() => {
-    if (!hasMounted.current) {
-      hasMounted.current = true
-      return
-    }
+    if (!hasMounted.current) { hasMounted.current = true; return }
     const el = ref.current
     const card = el?.children[index] as HTMLElement | undefined
-    if (card) {
-      requestAnimationFrame(() => {
-        card.scrollIntoView({
-          behavior: 'smooth',
-          inline: 'center',
-          block: 'nearest',
-        })
-      })
-    }
+    if (card) requestAnimationFrame(() => card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }))
   }, [index])
 
   const prev = () => setIndex((i) => Math.max(0, i - 1))
@@ -41,40 +29,26 @@ export default function DestinationCarousel() {
   return (
     <div className="max-w-6xl mx-auto my-10">
       <div className="flex items-center justify-between px-4">
-        <button
-          className="p-2 rounded-full border hover:bg-gray-50 dark:hover:bg-gray-800"
-          aria-label="Poprzedni"
-          onClick={prev}
-        >
-          <ChevronLeft />
+        <button className="btn btn-outline btn-sm rounded-full" aria-label="Poprzedni" onClick={prev}>
+          <ChevronLeft className="w-4 h-4" />
         </button>
         <h3 className="text-2xl font-bold">Pomysły na kierunki</h3>
-        <button
-          className="p-2 rounded-full border hover:bg-gray-50 dark:hover:bg-gray-800"
-          aria-label="Następny"
-          onClick={next}
-        >
-          <ChevronRight />
+        <button className="btn btn-outline btn-sm rounded-full" aria-label="Następny" onClick={next}>
+          <ChevronRight className="w-4 h-4" />
         </button>
       </div>
-      <div
-        ref={ref}
-        className="flex gap-6 px-4 py-6 overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar"
-      >
+
+      <div ref={ref} className="flex gap-6 px-4 py-6 overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar">
         {destinations.map((dest, i) => (
           <div
             key={i}
             onClick={() => scrollToIndex(i)}
-            className="snap-center shrink-0 w-[80vw] sm:w-[300px] bg-white dark:bg-gray-800 p-6 rounded-xl shadow text-center transition-transform duration-300 hover:scale-[1.03] cursor-pointer"
+            className="snap-center shrink-0 w-[80vw] sm:w-[300px] card card-hover text-center cursor-pointer"
           >
-            <h4
-              className="text-xl font-bold mb-3 text-[#f1861e]"
-              dangerouslySetInnerHTML={{ __html: dest.title }}
-            />
-            <p
-              className="text-gray-700 dark:text-gray-300"
-              dangerouslySetInnerHTML={{ __html: dest.desc }}
-            />
+            <div className="card-body">
+              <h4 className="text-xl font-bold text-[#f1861e] mb-2" dangerouslySetInnerHTML={{ __html: dest.title }} />
+              <p className="text-gray-700 dark:text-gray-300" dangerouslySetInnerHTML={{ __html: dest.desc }} />
+            </div>
           </div>
         ))}
       </div>

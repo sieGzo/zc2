@@ -1,11 +1,15 @@
+// pages/trails.tsx
 import Head from "next/head";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import GeoAutocomplete from "@/components/GeoAutocomplete";
 
 const RouteMap = dynamic(() => import("@/components/RouteMap"), { ssr: false });
 
 export default function TrailsPage() {
+  const router = useRouter();
+
   const [mode, setMode] = useState<"walk" | "bicycle">("bicycle");
   const [startLabel, setStartLabel] = useState("");
   const [endLabel, setEndLabel] = useState("");
@@ -19,12 +23,38 @@ export default function TrailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [pointStep, setPointStep] = useState<"start" | "end">("start");
 
+  const minutesTotal = useMemo(() => {
+    if (!route) return 0;
+    return Math.round(
+      (route?.features ?? []).reduce(
+        (acc: number, f: any) => acc + (f?.properties?.time ?? 0),
+        0
+      ) / 60
+    );
+  }, [route]);
+
+  const distanceKm = useMemo(() => {
+    if (!route) return 0;
+    const meters = (route?.features ?? []).reduce(
+      (acc: number, f: any) => acc + (f?.properties?.distance ?? 0),
+      0
+    );
+    return meters / 1000;
+  }, [route]);
+
+  function formatDuration(mins: number) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h === 0) return `${m} min`;
+    if (m === 0) return `${h} h`;
+    return `${h} h ${m} min`;
+  }
+
   async function plan() {
     setError(null);
     setRoute(null);
 
-    // Jeżeli ktoś tylko wpisał tekst i nie wybrał z listy/nie kliknął mapy,
-    // dogeokoduj wpisane etykiety na współrzędne.
+    // dogeokoduj etykiety jeśli nie kliknięto mapy/nie wybrano z listy
     async function geocodeIfNeeded(label: string, coords?: [number, number]) {
       if (coords || !label) return coords;
       const key = process.env.NEXT_PUBLIC_GEOAPIFY_KEY;
@@ -68,62 +98,52 @@ export default function TrailsPage() {
     }
   }
 
-// --- HELPERY: spłaszcz wszystkie odcinki i zsumuj dystans/czas ---
-function extractGeoapifyCoords(geojson: any): [number, number][] {
-  const out: [number, number][] = [];
-  const feats = geojson?.features ?? [];
-  for (const f of feats) {
-    const g = f?.geometry;
-    if (!g) continue;
-    if (g.type === "LineString") {
-      for (const [lon, lat] of g.coordinates) out.push([lat, lon]);
-    } else if (g.type === "MultiLineString") {
-      for (const seg of g.coordinates) {
-        for (const [lon, lat] of seg) out.push([lat, lon]);
+  // Geoapify → Leaflet: [lon,lat] → [lat,lon] + pełna trasa
+  function extractGeoapifyCoords(geojson: any): [number, number][] {
+    const out: [number, number][] = [];
+    const feats = geojson?.features ?? [];
+    for (const f of feats) {
+      const g = f?.geometry;
+      if (!g) continue;
+      if (g.type === "LineString") {
+        for (const [lon, lat] of g.coordinates) out.push([lat, lon]);
+      } else if (g.type === "MultiLineString") {
+        for (const seg of g.coordinates) {
+          for (const [lon, lat] of seg) out.push([lat, lon]);
+        }
       }
     }
+    return out;
   }
-  return out;
-}
+  const coords: [number, number][] = extractGeoapifyCoords(route);
 
-function sumProps(geojson: any, key: "distance" | "time") {
-  return (geojson?.features ?? []).reduce(
-    (acc: number, f: any) => acc + (f?.properties?.[key] ?? 0),
-    0
-  );
-}
-
-// Geoapify → Leaflet: [lon,lat] → [lat,lon] + pełna trasa
-const coords: [number, number][] = extractGeoapifyCoords(route);
-
-// Podsumowanie po wszystkich segmentach
-const dist = sumProps(route, "distance"); // metry
-const time = sumProps(route, "time");     // sekundy
-
-  function saveCurrentRoute() {
+  async function saveCurrentRoute() {
     if (!route || !start || !end) return;
-
     const name = `${startLabel || "Start"} → ${endLabel || "Meta"} (${mode === "walk" ? "piesza" : "rowerowa"})`;
 
-    fetch("/api/routes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        mode,
-        start,                // [lat, lon]
-        end,                  // [lat, lon]
-        distance: dist,       // metry
-        time,                 // sekundy
-        geojson: route        // cała odpowiedź z routingu
-      })
-    })
-    .then(async r => {
-      const data = await r.json().catch(() => ({}))
-      if (!r.ok) throw new Error(data?.error || "Nie udało się zapisać trasy")
-      alert("Trasa zapisana. Wejdź w: /trails/moje");
-    })
-    .catch(err => alert(err.message));
+    try {
+      const r = await fetch("/api/routes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          mode,
+          start,
+          end,
+          distance: distanceKm * 1000,  // metry
+          time: minutesTotal * 60,      // sekundy
+          geojson: route
+        })
+      });
+
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data?.error || "Nie udało się zapisać trasy");
+
+      // bez alertów — po prostu przenieś na listę
+      router.push("/szlaki/moje"); // dzięki rewrite z next.config.js
+    } catch (err: any) {
+      alert(err.message);
+    }
   }
 
   return (
@@ -139,9 +159,8 @@ const time = sumProps(route, "time");     // sekundy
           onSelect={(lat, lon, name) => {
             setStart([lat, lon]);
             if (name) setStartLabel(name);
-            setTimeout(() => setPointStep("end"), 0); // mała pauza by uniknąć podwójnego triggera
+            setTimeout(() => setPointStep("end"), 0);
           }}
-
         />
         <GeoAutocomplete
           label="Punkt docelowy"
@@ -162,9 +181,7 @@ const time = sumProps(route, "time");     // sekundy
         <label className="flex items-center gap-2">
           <input type="radio" name="mode" checked={mode === "bicycle"} onChange={() => setMode("bicycle")} /> rowerowa
         </label>
-        <button onClick={plan} className="ml-auto px-4 py-2 rounded bg-[#f1861e] text-white hover:bg-orange-600">
-          Zaplanuj
-        </button>
+        <button onClick={plan} className="ml-auto btn btn-primary">Zaplanuj</button>
       </div>
 
       <p className="mb-2 text-sm">
@@ -184,26 +201,18 @@ const time = sumProps(route, "time");     // sekundy
 
       {loading && <p className="mt-3">Liczenie trasy…</p>}
       {error && <p className="mt-3 text-red-600">{error}</p>}
-      {route && (
-        <div className="mt-4 p-4 rounded-lg border border-gray-200/80 bg-white text-gray-900 shadow-sm
-                        dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700
-                        flex items-center gap-6">
-          <div>
-            <p><strong>Dystans:</strong> {(dist / 1000).toFixed(1)} km</p>
-            <p><strong>Czas:</strong> {Math.round(time / 60)} min</p>
-          </div>
 
-          <button
-            onClick={saveCurrentRoute}
-            className="ml-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg
-                      bg-[#f1861e] text-white hover:bg-orange-600
-                      focus-visible:outline-none focus-visible:ring-2
-                      focus-visible:ring-[#f1861e] focus-visible:ring-offset-2
-                      dark:focus-visible:ring-offset-gray-900
-                      transition-colors"
-          >
-            Zapisz trasę
-          </button>
+      {route && (
+        <div className="card mt-4 card-hover">
+          <div className="card-body flex items-center gap-6">
+            <div>
+              <p><strong>Dystans:</strong> {distanceKm.toFixed(1)} km</p>
+              <p><strong>Czas:</strong> {formatDuration(minutesTotal)}</p>
+            </div>
+            <button onClick={saveCurrentRoute} className="ml-auto btn btn-primary">
+              Zapisz trasę
+            </button>
+          </div>
         </div>
       )}
     </main>

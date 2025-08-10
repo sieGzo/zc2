@@ -3,13 +3,19 @@ const nextConfig = {
   reactStrictMode: true,
   async rewrites() {
     return [
+      // Miejsca -> Places
       { source: '/miejsca', destination: '/places' },
+      { source: '/miejsca/:path*', destination: '/places/:path*' },
+
+      // Szlaki -> Trails
       { source: '/szlaki', destination: '/trails' },
+      { source: '/szlaki/:path*', destination: '/trails/:path*' },
+
+      // Artykuły -> Articles
       { source: '/artykuly', destination: '/articles' },
-      { source: '/miejsca/by-id/:id', destination: '/places/by-id/:id' },
-      { source: '/miejsca/by-xid/:xid', destination: '/places/by-xid/:xid' },
-      { source: '/szlaki/by-id/:id', destination: '/trails/by-id/:id' },
-    ];
+      { source: '/artykuly/:path*', destination: '/articles/:path*' },
+    ]
   },
-};
-module.exports = nextConfig;
+}
+
+module.exports = nextConfig

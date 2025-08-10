@@ -37,7 +37,8 @@ export default function Navbar() {
       <Link href="/blog" prefetch={false} className="hover:text-[#f1861e]" onClick={onClick}>Blog</Link>
       <Link href="/o-mnie" prefetch={false} className="hover:text-[#f1861e]" onClick={onClick}>O mnie</Link>
       <Link href="/kontakt" prefetch={false} className="hover:text-[#f1861e]" onClick={onClick}>Kontakt</Link>
-      <Link href="/trails" prefetch={false} className="hover:text-[#f1861e]" onClick={onClick}>Szlaki</Link>
+      {/* ⬇️ tu zmiana */}
+      <Link href="/szlaki" prefetch={false} className="hover:text-[#f1861e]" onClick={onClick}>Szlaki</Link>
     </>
   )
 
@@ -78,7 +79,7 @@ export default function Navbar() {
           <span className="font-bold text-lg">Zwiedzaj Chytrze</span>
         </Link>
 
-        {/* Desktop/Tablet: pokazuj pełne menu dopiero od XL (≥1280px) */}
+        {/* Desktop/Tablet: pełne menu od XL (≥1280px) */}
         <div className="hidden xl:flex items-center gap-5">
           <div className="flex items-center gap-5">
             <NavLinks />
@@ -90,7 +91,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile/Phone/Tablet (także poziomo): hamburger do <1280px */}
+        {/* Mobile/Tablet (<1280px): hamburger */}
         <button
           className="xl:hidden p-2"
           onClick={toggleMenu}

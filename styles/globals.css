@@ -166,3 +166,34 @@ ul[role="listbox"] > li:hover,
 .autocomplete-panel > li:hover {
   @apply bg-gray-100 dark:bg-gray-700;
 }
+
+/* --- Reusable UI (pasuje do Twojego Tailwinda) --- */
+@layer components {
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors
+           focus-visible:outline-none focus-visible:ring-2 ring-offset-2
+           dark:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-sm { @apply px-3 py-1.5 text-sm; }
+  .btn-md { @apply px-4 py-2; }
+
+  .btn-primary {
+    @apply bg-[#f1861e] text-white hover:bg-orange-600 focus-visible:ring-[#f1861e];
+  }
+  .btn-outline {
+    @apply border border-[#f1861e] text-[#f1861e]
+           hover:bg-orange-50 dark:hover:bg-gray-800 focus-visible:ring-[#f1861e];
+  }
+  .btn-ghost {
+    @apply text-[#f1861e] hover:bg-orange-50 dark:hover:bg-gray-800 focus-visible:ring-[#f1861e];
+  }
+
+  /* Cards */
+  .card { @apply rounded-lg border border-gray-200/70 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm; }
+  .card-hover { @apply hover:shadow-md transition; }
+  .card-body { @apply p-4 md:p-6; }
+
+  /* Drobiazgi */
+  .kicker { @apply text-[11px] tracking-wider font-semibold text-[#f1861e]; }
+}
