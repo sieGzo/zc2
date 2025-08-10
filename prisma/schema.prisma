@@ -44,9 +44,12 @@ model NewsletterSubscriber {
 
 model Visit {
   id        String   @id @default(cuid())
-  ip        String?
-  userAgent String?
+  ipHash    String   @db.VarChar(64)
+  userAgent String?  @db.VarChar(120)
   createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([ipHash])
 }
 
 // wymagane przez NextAuth (dopasowane do adaptera)

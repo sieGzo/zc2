@@ -1,100 +1,50 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import UAParser from 'ua-parser-js'
+import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 
-// prościutki filtr botów
-function isBot(ua: string) {
-  return /(bot|crawler|spider|preview|facebookexternalhit|whatsapp|telegram|discord|slurp)/i.test(ua)
+function clientIp(req: NextApiRequest) {
+  return (
+    (req.headers['x-real-ip'] as string) ||
+    (req.headers['x-forwarded-for']?.toString().split(',')[0].trim() ?? '') ||
+    req.socket.remoteAddress ||
+    ''
+  )
 }
 
-// sanity parse IP (Cloudflare/Vercel → x-real-ip/cf-connecting-ip/x-forwarded-for)
-function getIP(req: NextApiRequest) {
-  const cf = (req.headers['cf-connecting-ip'] as string) || ''
-  const xff = (req.headers['x-forwarded-for'] as string) || ''
-  const real = (req.headers['x-real-ip'] as string) || ''
-  const ip =
-    cf ||
-    (xff ? xff.split(',')[0].trim() : '') ||
-    real ||
-    (req.socket?.remoteAddress as string) ||
-    'unknown'
-  return ip
+function ipHmac(ip: string) {
+  const secret = process.env.VISIT_HASH_SECRET || 'CHANGE_ME_IN_ENV'
+  return crypto.createHmac('sha256', secret).update(ip).digest('hex').slice(0, 64)
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const ip = getIP(req)
-  const uaRaw = (req.headers['user-agent'] as string) || 'unknown'
-
-  // 1) spróbuj zapisać wizytę (soft-fail gdy nie ma tabeli)
   try {
-    // nie nabijamy statów botami ani lokalnym ::1
-    if (!isBot(uaRaw) && ip !== '::1') {
-      const parser = new UAParser(uaRaw)
-      const browser = parser.getBrowser()?.name || 'unknown'
-      const os = parser.getOS()?.name || 'unknown'
+    const ip = clientIp(req)
+    const ipHash = ip ? ipHmac(ip) : 'unknown'
+    const ua = (req.headers['user-agent'] || '').slice(0, 120)
 
-      // prościutki throttle: jeśli z tego IP jest już wpis z ostatnich 30 sekund – nie dodawaj
-      const THROTTLE_SEC = 30
-      const since = new Date(Date.now() - THROTTLE_SEC * 1000)
-      const recent = await prisma.visit.findFirst({
-        where: { ip: ip || 'unknown', createdAt: { gte: since } },
-        select: { id: true },
-      })
-
-      if (!recent) {
-        await prisma.visit.create({
-          data: {
-            ip: ip || 'unknown',
-            userAgent: `${browser} on ${os}`,
-          },
-        })
-      }
+    // miękko zapisz wizytę (ignoruj brak tabeli w środowisku przejściowym)
+    try {
+      await prisma.visit.create({ data: { ipHash, userAgent: ua } })
+    } catch (e: any) {
+      if (e?.code !== 'P2021') throw e
     }
-  } catch (err: any) {
-    // P2021 = brak tabeli Visit → ignorujemy
-    if (err?.code !== 'P2021') {
-      console.warn('visit insert warn:', err)
-    }
-  }
 
-  // 2) policz staty (soft-fail jak nie ma tabeli)
-  try {
-    const startOfToday = new Date()
-    startOfToday.setHours(0, 0, 0, 0)
-    const startOfMonth = new Date()
-    startOfMonth.setDate(1)
-    startOfMonth.setHours(0, 0, 0, 0)
+    const startOfToday = new Date(); startOfToday.setHours(0,0,0,0)
+    const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0,0,0,0)
 
-    const [total, today, month, uniqueIPs] = await Promise.all([
-      prisma.visit.count().catch((e: any) => (e?.code === 'P2021' ? 0 : Promise.reject(e))),
-      prisma.visit
-        .count({ where: { createdAt: { gte: startOfToday } } })
-        .catch((e: any) => (e?.code === 'P2021' ? 0 : Promise.reject(e))),
-      prisma.visit
-        .count({ where: { createdAt: { gte: startOfMonth } } })
-        .catch((e: any) => (e?.code === 'P2021' ? 0 : Promise.reject(e))),
-      prisma.visit
-        .findMany({
-          distinct: ['ip'],
-          select: { ip: true },
-          where: { ip: { notIn: ['::1', 'unknown', null as any] } },
-        })
-        .then((rows) => rows.length)
-        .catch((e: any) => (e?.code === 'P2021' ? 0 : Promise.reject(e))),
+    const safeCount = (p: Promise<any>) =>
+      p.catch((e:any)=> (e?.code === 'P2021' ? 0 : Promise.reject(e)))
+
+    const [total, today, month, unique] = await Promise.all([
+      safeCount(prisma.visit.count()),
+      safeCount(prisma.visit.count({ where: { createdAt: { gte: startOfToday } } })),
+      safeCount(prisma.visit.count({ where: { createdAt: { gte: startOfMonth } } })),
+      safeCount(prisma.visit.findMany({ select: { ipHash: true }, distinct: ['ipHash'] }).then(r => r.length)),
     ])
 
-    // lekkie cache’owanie po stronie edge
-    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300')
-    return res.status(200).json({ total, today, month, unique: uniqueIPs })
-  } catch (error) {
-    console.error('❌ Błąd API counter:', error)
-    // nie wywalaj UI – zwróć zera
-    return res.status(200).json({
-      total: 0,
-      today: 0,
-      month: 0,
-      unique: 0,
-      note: 'counter soft-failed',
-    })
+    res.status(200).json({ total, today, month, unique })
+  } catch (err) {
+    console.error('counter error', err)
+    res.status(200).json({ total: 0, today: 0, month: 0, unique: 0, note: 'soft-fail' })
   }
 }
