@@ -1,4 +1,3 @@
-// pages/profil.tsx
 import Head from 'next/head'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
@@ -8,6 +7,7 @@ import { getServerSession } from 'next-auth/next'
 import { useRouter } from 'next/router'
 import { authOptions } from './api/auth/[...nextauth]'
 import { prisma } from '@/lib/prisma'
+import { useToast } from '@/components/Toaster'
 
 const RouteMap = dynamic(() => import('@/components/RouteMap'), { ssr: false })
 
@@ -53,12 +53,10 @@ function capFirst(s?: string | null) {
   if (!s) return ''
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
-
 function formatKm(meters?: number | null) {
   if (!meters || meters <= 0) return null
   return `${(meters / 1000).toFixed(1)} km`
 }
-
 function formatDuration(seconds?: number | null) {
   if (!seconds || seconds <= 0) return '—'
   const minutes = Math.round(seconds / 60)
@@ -70,6 +68,8 @@ function formatDuration(seconds?: number | null) {
 
 export default function Profil({ user, routes }: Props) {
   const router = useRouter()
+  const toast = useToast()
+
   const [activeId, setActiveId] = useState<string | null>(routes[0]?.id ?? null)
   const active = useMemo(() => routes.find(r => r.id === activeId) || null, [routes, activeId])
   const coords = useMemo(() => extractCoords(active?.geojson), [active])
@@ -83,10 +83,10 @@ export default function Profil({ user, routes }: Props) {
     const res = await fetch(`/api/routes/${id}`, { method: 'DELETE' })
     if (!res.ok) {
       const j = await res.json().catch(() => ({}))
-      alert(j.error || `Błąd usuwania (HTTP ${res.status})`)
+      toast.error(j.error || `Błąd usuwania (HTTP ${res.status})`)
       return
     }
-    // najprościej: przeładuj (zaciągnie świeże SSR)
+    toast.success('Trasa usunięta')
     window.location.reload()
   }
 
@@ -95,10 +95,10 @@ export default function Profil({ user, routes }: Props) {
     const r = await fetch('/api/auth/delete-account', { method: 'POST' })
     if (!r.ok) {
       const j = await r.json().catch(() => ({}))
-      alert(j.message || 'Nie udało się usunąć konta.')
+      toast.error(j.message || 'Nie udało się usunąć konta.')
       return
     }
-    // Po stronie API usuwamy sesje; tu na wszelki wypadek redirect:
+    toast.success('Konto usunięte')
     router.push('/')
   }
 
@@ -214,7 +214,6 @@ export async function getServerSideProps(
     userId = u?.id ?? null
   }
 
-  // Brak userId → niech SSR nie wysypie się
   const routes = userId
     ? await prisma.route.findMany({
         where: { userId },

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 
 function clientIp(req: NextApiRequest) {
   return (
@@ -20,26 +21,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const ip = clientIp(req)
     const ipHash = ip ? ipHmac(ip) : 'unknown'
-    const ua = (req.headers['user-agent'] || '').slice(0, 120)
+    const ua = String(req.headers['user-agent'] || '').slice(0, 200)
 
-    // miękko zapisz wizytę (ignoruj brak tabeli w środowisku przejściowym)
+    // miękki zapis wizyty (ignoruj brak tabeli Visit)
     try {
-      await prisma.visit.create({ data: { ipHash, userAgent: ua } })
+      await prisma.visit.create({
+        data: { ipHash, userAgent: ua }, // VisitCreateInput z ipHash i userAgent
+      })
     } catch (e: any) {
       if (e?.code !== 'P2021') throw e
     }
 
-    const startOfToday = new Date(); startOfToday.setHours(0,0,0,0)
-    const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0,0,0,0)
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
 
-    const safeCount = (p: Promise<any>) =>
-      p.catch((e:any)=> (e?.code === 'P2021' ? 0 : Promise.reject(e)))
+    const safe = <T,>(p: Promise<T>) =>
+      p.catch((e: any) => (e?.code === 'P2021' ? (0 as unknown as T) : Promise.reject(e)))
 
     const [total, today, month, unique] = await Promise.all([
-      safeCount(prisma.visit.count()),
-      safeCount(prisma.visit.count({ where: { createdAt: { gte: startOfToday } } })),
-      safeCount(prisma.visit.count({ where: { createdAt: { gte: startOfMonth } } })),
-      safeCount(prisma.visit.findMany({ select: { ipHash: true }, distinct: ['ipHash'] }).then(r => r.length)),
+      safe(prisma.visit.count()),
+      safe(prisma.visit.count({ where: { createdAt: { gte: startOfToday } } })),
+      safe(prisma.visit.count({ where: { createdAt: { gte: startOfMonth } } })),
+      safe(
+        prisma.visit
+          .findMany({
+            select: { ipHash: true },
+            distinct: [Prisma.VisitScalarFieldEnum.ipHash],
+          })
+          .then((r) => r.length)
+      ),
     ])
 
     res.status(200).json({ total, today, month, unique })
