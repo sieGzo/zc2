@@ -143,3 +143,26 @@
     white-space: normal;
   }
 }
+
+
+/* Autocomplete: wymuś czytelność w light/dark + warstwa nad mapą */
+ul[role="listbox"],
+.autocomplete-panel {
+  @apply absolute z-50 w-full mt-1 max-h-48 overflow-y-auto
+         bg-white text-gray-900 border border-gray-300 rounded-md shadow-lg;
+}
+
+.dark ul[role="listbox"],
+.dark .autocomplete-panel {
+  @apply bg-gray-800 text-gray-100 border-gray-700;
+}
+
+ul[role="listbox"] > li,
+.autocomplete-panel > li {
+  @apply p-2 cursor-pointer;
+}
+
+ul[role="listbox"] > li:hover,
+.autocomplete-panel > li:hover {
+  @apply bg-gray-100 dark:bg-gray-700;
+}
