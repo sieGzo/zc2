@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma migrate deploy && next build",
+    "build": "next build",
     "start": "next start",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "migrate:deploy": "prisma migrate deploy"
   },
   "engines": {
-    "node": ">=18.17.0"
+    "node": "20.x"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.1.0",
