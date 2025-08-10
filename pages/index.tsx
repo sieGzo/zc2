@@ -1,98 +1,139 @@
 import Head from 'next/head'
-import Image from 'next/image'
-import ScrollToTop from '../components/ScrollToTop'
-import IntroVideo from '../components/IntroVideo'
-import DestinationCarousel from '../components/DestinationCarousel'
-import PromocjeLinii from '../components/PromocjeLinii'
+import ScrollToTop from '@/components/ScrollToTop'
+import IntroVideo from '@/components/IntroVideo'
+import DestinationCarousel from '@/components/DestinationCarousel'
+import PromocjeLinii from '@/components/PromocjeLinii'
+import Link from 'next/link'
 
 export default function Home() {
+  const title = 'Zwiedzaj Chytrze — szlaki i blog podróżniczy'
+  const description =
+    'Planer tras pieszych i rowerowych + blog podróżniczy. Zapisuj trasy, inspiruj się i zwiedzaj… chytrze!'
+  const site = 'https://zwiedzajchytrze.pl'
+  const ogImage = `${site}/og.jpg` // dodaj plik do /public/og.jpg
+
   return (
     <>
       <Head>
-        <title>Zwiedzaj&nbsp;Chytrze</title>
-        <meta
-          name="description"
-          content="Twoje podróże, Twoje zasady – z&nbsp;poradnikiem w&nbsp;kieszeni"
-        />
-        {/* OPEN GRAPH */}
-        <meta property="og:title" content="Zwiedzaj Chytrze" />
-        <meta property="og:description" content="Twoje podróże, Twoje zasady – z poradnikiem w kieszeni" />
-        <meta property="og:image" content="https://twojadomena.pl/og-image.jpg" />
-        <meta property="og:url" content="https://twojadomena.pl/" />
+        <title>{title}</title>
+        <link rel="canonical" href={site} />
+        <meta name="description" content={description} />
+        <meta name="robots" content="index,follow" />
+
+        {/* Open Graph */}
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:url" content={site} />
         <meta property="og:type" content="website" />
 
-        {/* TWITTER CARDS */}
+        {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Zwiedzaj Chytrze" />
-        <meta name="twitter:description" content="Twoje podróże, Twoje zasady – z poradnikiem w kieszeni" />
-        <meta name="twitter:image" content="https://twojadomena.pl/og-image.jpg" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={ogImage} />
       </Head>
 
       <main className="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-        {/* HERO */}
-        <section className="relative w-full bg-gradient-to-r from-[#f1861e]/10 via-white to-[#f1861e]/10 dark:from-gray-900 dark:to-gray-800 py-12 px-4 md:px-8">
-          <div className="max-w-6xl mx-auto flex flex-col-reverse md:flex-row items-center gap-10">
-            <div className="flex-1 text-center md:text-center">
-              <h1 className="text-3xl md:text-5xl font-extrabold text-[#f1861e] mb-4 leading-tight">
-                Wybierz&nbsp;mądrze, wybierz&nbsp;chytrze
-              </h1>
-              <p className="text-gray-700 dark:text-gray-200 text-lg md:text-xl mb-6">
-                Oszczędzaj czas, pieniądze i&nbsp;nerwy – podróżuj z&nbsp;głową dzięki naszym szlakom, poradnikom i&nbsp;promocjom.
-              </p>
-              <a
-                href="/blog"
-                className="inline-block bg-[#f1861e] text-white px-6 py-3 rounded-full font-semibold hover:bg-orange-600 transition-colors"
+        {/* HERO — czysty, skupiony na dwóch ścieżkach */}
+        <section className="relative w-full py-14 px-4 md:px-8 bg-gradient-to-br from-[#f1861e]/10 via-white to-[#f1861e]/10 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+          <div className="max-w-6xl mx-auto text-center">
+            <p className="inline-flex items-center gap-2 text-[13px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              🦊 Zwiedzaj mądrze. Zwiedzaj chytrze.
+            </p>
+            <h1 className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight">
+              Planer tras + blog podróżniczy
+            </h1>
+            <p className="mt-4 text-lg md:text-xl text-gray-700 dark:text-gray-300">
+              Zaplanuj pieszo lub rowerem, zapisz trasę i wróć do niej później.
+              A gdy szukasz pomysłów — wpadnij na bloga po świeże inspiracje.
+            </p>
+
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                href="/trails"
+                className="w-full sm:w-auto inline-flex items-center justify-center rounded-full px-6 py-3 font-semibold bg-[#f1861e] text-white hover:bg-orange-600 transition"
               >
-                Zobacz&nbsp;nowe&nbsp;wpisy
-              </a>
+                🚀 Otwórz planer trasy
+              </Link>
+              <Link
+                href="/blog"
+                className="w-full sm:w-auto inline-flex items-center justify-center rounded-full px-6 py-3 font-semibold border border-[#f1861e] text-[#f1861e] hover:bg-orange-50 dark:hover:bg-gray-800 transition"
+              >
+                📖 Przejdź do bloga
+              </Link>
             </div>
 
-            <div className="flex-1 flex justify-center md:justify-end">
-              <Image
-                src="/hero-travel.png"
-                alt="Podróżująca kobieta z&nbsp;mapą"
-                width={500}
-                height={400}
-                className="rounded-xl shadow-lg w-full max-w-md h-auto object-contain"
-                unoptimized
-                priority
-              />
+            <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+              Bez logowania zaplanujesz trasę; zapis wymaga konta (sekundy).
             </div>
           </div>
         </section>
 
-        {/* WIDEO */}
+        {/* Krótkie video – może zostać jako smaczek */}
         <IntroVideo />
 
-        {/* SZLAKI */}
-        <section className="max-w-6xl mx-auto px-4 my-16">
-          <h2 className="text-3xl font-bold mb-8 text-center">🗺️ Szlaki i&nbsp;trasy</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <h3 className="text-xl font-semibold mb-2">🚶‍♀️ Szlaki&nbsp;piesze</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Krótkie i&nbsp;długie&nbsp;spacery po&nbsp;lasach, jeziorach, miasteczkach – dla&nbsp;każdego poziomu&nbsp;kondycji.
-              </p>
-            </div>
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <h3 className="text-xl font-semibold mb-2">⛰️ Szlaki&nbsp;górskie</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Bezpieczne i&nbsp;piękne&nbsp;trasy po&nbsp;górach – z&nbsp;wózkiem, z&nbsp;dzieckiem, solo lub&nbsp;z&nbsp;ekipą.
-              </p>
-            </div>
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <h3 className="text-xl font-semibold mb-2">🚴 Szlaki&nbsp;rowerowe</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Rowerowe&nbsp;przygody w&nbsp;Polsce i&nbsp;Europie – z&nbsp;GPX-em, zdjęciami i&nbsp;praktycznymi&nbsp;radami.
-              </p>
-            </div>
+        {/* 3 kafle: rodzaje szlaków → prowadzą do /trails */}
+        <section className="max-w-6xl mx-auto px-4 my-14">
+          <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center">🗺️ Szlaki i trasy</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { icon: '🚶‍♀️', title: 'Szlaki piesze', text: 'Od krótkich spacerów po dłuższe wędrówki.' },
+              { icon: '⛰️', title: 'Górskie', text: 'Trasy bezpieczne i piękne, z mapą i podpowiedziami.' },
+              { icon: '🚴', title: 'Rowerowe', text: 'Rowerowe przygody w Polsce i Europie, z GPX.' },
+            ].map((c) => (
+              <Link
+                key={c.title}
+                href="/trails"
+                className="rounded-lg shadow-sm border border-gray-200/70 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 hover:shadow-md transition"
+              >
+                <div className="text-2xl">{c.icon}</div>
+                <h3 className="mt-2 text-lg font-semibold">{c.title}</h3>
+                <p className="mt-1 text-gray-600 dark:text-gray-300">{c.text}</p>
+                <span className="mt-4 inline-block text-[#f1861e] font-medium">Otwórz planer →</span>
+              </Link>
+            ))}
           </div>
         </section>
 
-        {/* GORĄCE DESTYNACJE */}
-        <section className="bg-orange-50 dark:bg-gray-800 py-16">
+        {/* Teaser bloga – lekkie karty (na razie statyczne, potem podłączysz CMS/MDX) */}
+        <section className="max-w-6xl mx-auto px-4 my-14">
+          <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center">📝 Z bloga</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { tag: 'NORWEGIA', title: 'Lofoty bez tłumów', href: '/blog' },
+              { tag: 'USA', title: 'Roadtrip przez parki', href: '/blog' },
+              { tag: 'ISLANDIA', title: 'Zorza, wodospady i mgła', href: '/blog' },
+            ].map((p) => (
+              <Link
+                key={p.title}
+                href={p.href}
+                className="rounded-lg overflow-hidden border border-gray-200/70 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md transition"
+              >
+                {/* Miejsce na miniaturę – na razie gradient */}
+                <div className="h-32 bg-gradient-to-br from-orange-100 to-orange-300 dark:from-gray-700 dark:to-gray-600" />
+                <div className="p-4">
+                  <span className="text-[11px] tracking-wider font-semibold text-[#f1861e]">{p.tag}</span>
+                  <h3 className="mt-2 font-semibold">{p.title}</h3>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Czytaj dalej →</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          <div className="mt-6 text-center">
+            <Link href="/blog" className="text-[#f1861e] font-medium underline">
+              Zobacz wszystkie wpisy
+            </Link>
+          </div>
+        </section>
+
+        {/* Destynacje & Promocje – niżej, jako dodatki */}
+        <section className="bg-orange-50 dark:bg-gray-800 py-12">
           <div className="max-w-6xl mx-auto px-4">
-            <h2 className="text-3xl font-bold text-center mb-10 text-[#f1861e]">🔥 Gorące&nbsp;destynacje</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 text-[#f1861e]">
+              🔥 Gorące destynacje
+            </h2>
             <div className="overflow-x-auto no-scrollbar">
               <div className="flex gap-4 px-2 md:px-0 snap-x snap-mandatory">
                 <DestinationCarousel />
@@ -101,24 +142,23 @@ export default function Home() {
           </div>
         </section>
 
-        {/* PROMOCJE LINII*/}
-        <section className="max-w-6xl mx-auto px-4 my-16">
-          <h2 className="text-3xl font-bold mb-8 text-center">✈️ Promocje&nbsp;linii&nbsp;lotniczych</h2>
+        <section className="max-w-6xl mx-auto px-4 my-14">
+          <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center">✈️ Promocje linii lotniczych</h2>
           <PromocjeLinii />
-        </section> 
+        </section>
 
-        {/* LINKI */}
-        <section className="mt-12 text-center px-4">
+        {/* Linki końcowe */}
+        <section className="mt-10 text-center px-4">
           <div className="flex flex-col md:flex-row justify-center md:space-x-6 space-y-2 md:space-y-0">
-            <a href="/blog" className="text-[#f1861e] font-medium underline">📖 Przejdź&nbsp;do&nbsp;bloga</a>
-            <a href="/o-mnie" className="text-[#f1861e] font-medium underline">🧭 Poznaj&nbsp;mnie</a>
-            <a href="/kontakt" className="text-[#f1861e] font-medium underline">📬 Skontaktuj&nbsp;się</a>
+            <Link href="/trails" className="text-[#f1861e] font-medium underline">🗺️ Planer trasy</Link>
+            <Link href="/blog" className="text-[#f1861e] font-medium underline">📖 Blog</Link>
+            <Link href="/o-mnie" className="text-[#f1861e] font-medium underline">🧭 O mnie</Link>
+            <Link href="/kontakt" className="text-[#f1861e] font-medium underline">📬 Kontakt</Link>
           </div>
         </section>
 
         <ScrollToTop />
       </main>
-      
     </>
   )
 }

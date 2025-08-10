@@ -1,54 +1,44 @@
-// pages/blog.tsx
 import Head from 'next/head'
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
-import ScrollToTop from '../components/ScrollToTop'
+import Link from 'next/link'
+import ScrollToTop from '@/components/ScrollToTop'
 
 export default function Blog() {
+  const title = 'Blog podróżniczy – Zwiedzaj Chytrze'
+  const description = 'Relacje z podróży, praktyczne porady, mapy i inspiracje.'
+
   return (
     <>
       <Head>
-        <title>Blog podróżniczy – Zwiedzaj&nbsp;Chytrze</title>
-        <meta name="description" content="Wyprawy z&nbsp;pasją – odkryj relacje z&nbsp;podróży po&nbsp;Lofotach, USA, Indonezji, Islandii, Austrii i&nbsp;więcej!" />
+        <title>{title}</title>
+        <meta name="description" content={description} />
       </Head>
 
       <main className="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-        <div className="max-w-4xl mx-auto px-4 py-16">
-          <h1 className="text-4xl font-bold mb-8 text-center">🌍 Wyprawy krok po&nbsp;kroku</h1>
-
-          <p className="text-lg text-center mb-12">
-            Tutaj znajdziesz wpisy z&nbsp;moich najciekawszych podróży – praktyczne porady, trasy, zdjęcia i&nbsp;subiektywne odczucia.
+        <div className="max-w-5xl mx-auto px-4 py-14">
+          <h1 className="text-4xl font-bold text-center">🌍 Wyprawy krok po kroku</h1>
+          <p className="mt-3 text-lg text-center text-gray-700 dark:text-gray-300">
+            Poradniki, trasy, zdjęcia i tipy — wszystko, by podróżować… chytrze.
           </p>
 
-          <ul className="grid gap-6">
-            <li className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-2xl font-semibold text-[#f1861e]">🇳🇴 Lofoty</h2>
-              <p className="text-gray-700 dark:text-gray-300">Norwegia poza sezonem – rodzinne trasy, dzikie krajobrazy, dużo praktycznych wskazówek.</p>
-            </li>
-            <li className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-2xl font-semibold text-[#f1861e]">🇺🇸 USA</h2>
-              <p className="text-gray-700 dark:text-gray-300">Parki narodowe, roadtrip i&nbsp;podróż życia – z&nbsp;dzieckiem i&nbsp;plecakiem.</p>
-            </li>
-            <li className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-2xl font-semibold text-[#f1861e]">🇮🇩 Indonezja</h2>
-              <p className="text-gray-700 dark:text-gray-300">Wyspy, wulkany, uśmiechy i&nbsp;komary – czyli Azja z&nbsp;bliska.</p>
-            </li>
-            <li className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-2xl font-semibold text-[#f1861e]">🇮🇸 Islandia</h2>
-              <p className="text-gray-700 dark:text-gray-300">Zorza, wodospady i&nbsp;szczypta magii – z&nbsp;praktycznymi mapami i&nbsp;tipami.</p>
-            </li>
-            <li className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-2xl font-semibold text-[#f1861e]">🇦🇹 Wiedeń</h2>
-              <p className="text-gray-700 dark:text-gray-300">Krótki wypad do Austrii – kultura, kawiarnie i&nbsp;dziecko w&nbsp;wózku.</p>
-            </li>
-            <li className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-2xl font-semibold text-[#f1861e]">🇲🇬 Madagaskar</h2>
-              <p className="text-gray-700 dark:text-gray-300">Nietypowe kierunki – podróż, która zmienia spojrzenie na&nbsp;świat.</p>
-            </li>
-            <li className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-2xl font-semibold text-[#f1861e]">🇲🇩 Mołdawia i&nbsp;Naddniestrze</h2>
-              <p className="text-gray-700 dark:text-gray-300">Poza szlakiem – historia, kontrasty i&nbsp;dużo taniego wina 🍷</p>
-            </li>
+          <ul className="mt-10 grid gap-6 md:grid-cols-2">
+            {[
+              { tag: 'NORWEGIA', title: 'Lofoty poza sezonem', teaser: 'Rodzinne trasy i dzikie krajobrazy.' },
+              { tag: 'USA', title: 'Parki narodowe i roadtrip', teaser: 'Przez zachodnie stany – praktycznie.' },
+              { tag: 'ISLANDIA', title: 'Zorza i wodospady', teaser: 'Mapy miejsc + wskazówki.' },
+              { tag: 'WIEDEŃ', title: 'Weekend w Austrii', teaser: 'Kawa, kultura i spacery z wózkiem.' },
+            ].map((p) => (
+              <li key={p.title} className="rounded-lg overflow-hidden border border-gray-200/70 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md transition">
+                <div className="h-36 bg-gradient-to-br from-orange-100 to-orange-300 dark:from-gray-700 dark:to-gray-600" />
+                <div className="p-5">
+                  <span className="text-[11px] tracking-wider font-semibold text-[#f1861e]">{p.tag}</span>
+                  <h2 className="mt-1 text-xl font-semibold">{p.title}</h2>
+                  <p className="mt-1 text-gray-700 dark:text-gray-300">{p.teaser}</p>
+                  <Link href="/blog" className="mt-3 inline-block text-[#f1861e] font-medium">
+                    Czytaj → 
+                  </Link>
+                </div>
+              </li>
+            ))}
           </ul>
         </div>
 

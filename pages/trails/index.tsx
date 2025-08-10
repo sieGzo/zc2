@@ -185,19 +185,27 @@ const time = sumProps(route, "time");     // sekundy
       {loading && <p className="mt-3">Liczenie trasy…</p>}
       {error && <p className="mt-3 text-red-600">{error}</p>}
       {route && (
-      <div className="mt-4 p-3 bg-gray-100 rounded flex items-center gap-6">
-        <div>
-          <p><strong>Dystans:</strong> {(dist / 1000).toFixed(1)} km</p>
-          <p><strong>Czas:</strong> {Math.round(time / 60)} min</p>
+        <div className="mt-4 p-4 rounded-lg border border-gray-200/80 bg-white text-gray-900 shadow-sm
+                        dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700
+                        flex items-center gap-6">
+          <div>
+            <p><strong>Dystans:</strong> {(dist / 1000).toFixed(1)} km</p>
+            <p><strong>Czas:</strong> {Math.round(time / 60)} min</p>
+          </div>
+
+          <button
+            onClick={saveCurrentRoute}
+            className="ml-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg
+                      bg-[#f1861e] text-white hover:bg-orange-600
+                      focus-visible:outline-none focus-visible:ring-2
+                      focus-visible:ring-[#f1861e] focus-visible:ring-offset-2
+                      dark:focus-visible:ring-offset-gray-900
+                      transition-colors"
+          >
+            Zapisz trasę
+          </button>
         </div>
-        <button
-          onClick={saveCurrentRoute}
-          className="ml-auto px-4 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700"
-        >
-          Zapisz trasę
-        </button>
-      </div>
-    )}
+      )}
     </main>
   );
 }

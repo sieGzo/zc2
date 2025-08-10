@@ -1,7 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import {
   FaTiktok,
   FaInstagram,
@@ -17,95 +18,141 @@ type VisitStats = {
   unique: number
 }
 
+function StatCard({
+  label,
+  value,
+  loading,
+  emoji,
+}: {
+  label: string
+  value?: number
+  loading?: boolean
+  emoji: string
+}) {
+  const fmt = useMemo(() => new Intl.NumberFormat('pl-PL'), [])
+  return (
+    <div
+      className="rounded-xl border border-gray-200/70 bg-white px-4 py-3 shadow-sm
+                 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-100"
+      aria-live="polite"
+    >
+      <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
+      {loading ? (
+        <div className="mt-1 h-6 w-20 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+      ) : (
+        <div className="mt-1 text-lg font-semibold flex items-center gap-2">
+          <span aria-hidden>{emoji}</span>
+          <span>{fmt.format(value ?? 0)}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Footer() {
   const [visits, setVisits] = useState<VisitStats | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/auth/counter')
+    const ac = new AbortController()
+    fetch('/api/auth/counter', { signal: ac.signal, cache: 'no-store' })
       .then((res) => {
-        if (!res.ok) throw new Error('❌ Błąd odpowiedzi z serwera')
+        if (!res.ok) throw new Error('Błąd odpowiedzi z serwera')
         return res.json()
       })
       .then((data) => {
-        console.log('✅ Dane odwiedzin z API:', data)
         setVisits(data)
+        setError(null)
       })
-      .catch((err) => console.error('❌ Błąd pobierania danych:', err))
+      .catch((err) => {
+        if (err.name !== 'AbortError') setError('Nie udało się pobrać statystyk')
+      })
+    return () => ac.abort()
   }, [])
 
+  const loading = !visits && !error
+
   return (
-    <footer className="bg-gray-100 dark:bg-gray-900 border-t mt-16 px-4 py-10 text-gray-600 dark:text-gray-400 text-center">
-      <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-4">
-        {/* Logo i tekst */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 text-sm">
+    <footer className="mt-16 border-t bg-gray-50/70 px-4 py-10 text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 sm:grid-cols-2">
+        {/* Lewy blok: logo + statystyki */}
+        <div className="flex items-center gap-5">
           <Image
             src="/logo.png"
-            alt="Zwiedzaj Chytrze Logo"
-            width={160}
-            height={90}
-            className="h-auto w-[120px] sm:w-[140px]"
+            alt="Zwiedzaj Chytrze"
+            width={120}
+            height={120}
+            className="h-16 w-16 rounded-lg ring-1 ring-gray-200 dark:ring-gray-800"
           />
-          <div className="text-xs sm:text-sm font-light text-left">
-            <p>
+          <div className="flex-1">
+            <p className="text-sm">
               &copy; {new Date().getFullYear()}{' '}
               <span className="font-semibold text-[#f1861e]">Zwiedzaj Chytrze</span>. Wszystkie prawa zastrzeżone.
             </p>
-            <div className="mt-2 space-y-1 text-gray-500 dark:text-gray-500 leading-snug">
-              <p>🔢 Odwiedzin ogółem: <span className="font-medium">{visits?.total ?? '...'}</span></p>
-              <p>📅 Dziś: <span className="font-medium">{visits?.today ?? '...'}</span></p>
-              <p>🗓️ W tym miesiącu: <span className="font-medium">{visits?.month ?? '...'}</span></p>
-              <p>👥 Unikalnych gości: <span className="font-medium">{visits?.unique ?? '...'}</span></p>
+
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StatCard label="Odwiedzin ogółem" value={visits?.total} loading={loading} emoji="🔢" />
+              <StatCard label="Dziś" value={visits?.today} loading={loading} emoji="📅" />
+              <StatCard label="W tym miesiącu" value={visits?.month} loading={loading} emoji="🗓️" />
+              <StatCard label="Unikalni goście" value={visits?.unique} loading={loading} emoji="👥" />
             </div>
+
+            {error && (
+              <div className="mt-3 text-xs text-red-500">
+                {error}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Ikony sociali */}
-        <div className="flex items-center justify-center gap-4 text-xl text-[#f1861e]">
-          <a
-            href="https://www.youtube.com/@zwiedzajchytrze"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="YouTube"
-            className="hover:scale-110 transition-transform"
-          >
-            <FaYoutube />
-          </a>
-          <a
-            href="https://www.threads.com/@zwiedzajchytrze"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Threads"
-            className="hover:scale-110 transition-transform"
-          >
-            <FaHashtag />
-          </a>
-          <a
-            href="https://www.tiktok.com/@zwiedzajchytrze"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="TikTok"
-            className="hover:scale-110 transition-transform"
-          >
-            <FaTiktok />
-          </a>
-          <a
-            href="https://www.instagram.com/zwiedzajchytrze/"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Instagram"
-            className="hover:scale-110 transition-transform"
-          >
-            <FaInstagram />
-          </a>
-          <a
-            href="https://www.facebook.com/profile.php?id=61578581730371"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Facebook"
-            className="hover:scale-110 transition-transform"
-          >
-            <FaFacebook />
-          </a>
+        {/* Prawy blok: sociale */}
+        <div className="flex flex-col items-center justify-center gap-4 sm:items-end">
+          <div className="flex items-center gap-4 text-2xl text-[#f1861e]">
+            <Link
+              href="https://www.youtube.com/@zwiedzajchytrze"
+              target="_blank"
+              aria-label="YouTube"
+              className="transition-transform hover:scale-110"
+            >
+              <FaYoutube />
+            </Link>
+            <Link
+              href="https://www.threads.com/@zwiedzajchytrze"
+              target="_blank"
+              aria-label="Threads"
+              className="transition-transform hover:scale-110"
+            >
+              <FaHashtag />
+            </Link>
+            <Link
+              href="https://www.tiktok.com/@zwiedzajchytrze"
+              target="_blank"
+              aria-label="TikTok"
+              className="transition-transform hover:scale-110"
+            >
+              <FaTiktok />
+            </Link>
+            <Link
+              href="https://www.instagram.com/zwiedzajchytrze/"
+              target="_blank"
+              aria-label="Instagram"
+              className="transition-transform hover:scale-110"
+            >
+              <FaInstagram />
+            </Link>
+            <Link
+              href="https://www.facebook.com/profile.php?id=61578581730371"
+              target="_blank"
+              aria-label="Facebook"
+              className="transition-transform hover:scale-110"
+            >
+              <FaFacebook />
+            </Link>
+          </div>
+
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Dziękuję za każdą wizytę ✌️
+          </p>
         </div>
       </div>
     </footer>
