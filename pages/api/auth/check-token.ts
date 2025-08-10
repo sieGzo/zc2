@@ -1,4 +1,3 @@
-// pages/api/auth/check-token.ts
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 
@@ -10,7 +9,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const user = await prisma.user.findFirst({
+    // emailToken masz @unique, więc można użyć findUnique
+    const user = await prisma.user.findUnique({
       where: { emailToken: token },
     })
 
@@ -18,13 +18,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ success: false, message: 'Nie znaleziono użytkownika', verified: false })
     }
 
-    // Jeśli użytkownik jeszcze nie był potwierdzony – aktualizuj
+    // Jeśli użytkownik nie był jeszcze potwierdzony – ustaw znacznik czasu
     if (!user.emailVerified) {
       await prisma.user.update({
         where: { id: user.id },
         data: {
-          emailVerified: true,
-          emailToken: null, // usuwamy token po użyciu
+          emailVerified: new Date(), // ✅ DateTime zamiast boolean
+          emailToken: null,          // ✅ pole jest opcjonalne, więc null jest OK
         },
       })
     }
