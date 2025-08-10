@@ -8,6 +8,10 @@ import Footer from '../components/Footer'
 import { ToasterProvider } from '@/components/Toaster'
 import 'leaflet/dist/leaflet.css'
 
+// ⬇️ Vercel – Performance + Analytics
+import { SpeedInsights } from '@vercel/speed-insights/next'
+import { Analytics } from '@vercel/analytics/react'
+
 export default function MyApp({ Component, pageProps }: AppProps) {
   useEffect(() => {
     if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
@@ -22,6 +26,9 @@ export default function MyApp({ Component, pageProps }: AppProps) {
         <Navbar />
         <Component {...pageProps} />
         <Footer />
+        {/* ⬇️ Wstaw na końcu aplikacji */}
+        <Analytics />
+        <SpeedInsights />
       </ToasterProvider>
     </SessionProvider>
   )
