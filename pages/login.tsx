@@ -5,6 +5,17 @@ import { useRouter } from "next/router"
 import Head from "next/head"
 import Link from "next/link"
 
+const errorMessages: Record<string, string> = {
+  EmailNotVerified: "Najpierw potwierdź e-mail.",
+  CredentialsSignin: "Nieprawidłowe dane logowania.",
+  OAuthSignin: "Błąd logowania przez dostawcę.",
+  OAuthCallback: "Błąd podczas autoryzacji dostawcy.",
+  OAuthAccountNotLinked: "To konto jest już powiązane z inną metodą logowania.",
+  AccessDenied: "Dostęp zabroniony.",
+  Configuration: "Błąd konfiguracji logowania.",
+  default: "Wystąpił błąd. Spróbuj ponownie.",
+}
+
 export default function Login() {
   const router = useRouter()
   const [emailOrUsername, setEmailOrUsername] = useState("")
@@ -12,6 +23,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // „Bezpieczny” callbackUrl — nigdy nie wracamy na /login
   const safeCallbackUrl = useMemo(() => {
     const raw = typeof router.query.callbackUrl === "string" ? router.query.callbackUrl : "/"
     try {
@@ -22,11 +34,17 @@ export default function Login() {
     }
   }, [router.query.callbackUrl])
 
+  // Przechwycenie błędów NextAuth z ?error=... i komunikat „verified”
   useEffect(() => {
     if (typeof router.query.error === "string") {
-      setError(router.query.error === "EmailNotVerified" ? "Najpierw potwierdź e-mail." : router.query.error)
+      const msg = errorMessages[router.query.error] || errorMessages.default
+      setError(msg)
     }
-  }, [router.query.error])
+    // jeśli wracamy z weryfikacji e-maila
+    if (router.query.verified === "1") {
+      setError(null)
+    }
+  }, [router.query.error, router.query.verified])
 
   const handleCredentials = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,9 +58,9 @@ export default function Login() {
         username: emailOrUsername,
         password,
       })
-
       if (res?.error) {
-        setError(res.error === "EmailNotVerified" ? "Najpierw potwierdź e-mail." : "Nieprawidłowe dane logowania.")
+        const msg = errorMessages[res.error] || errorMessages.default
+        setError(msg)
         return
       }
       if (res?.url) {
@@ -68,11 +86,24 @@ export default function Login() {
       <form onSubmit={handleCredentials} className="space-y-3">
         <label className="block">
           <span className="text-sm">Email lub nazwa użytkownika</span>
-          <input value={emailOrUsername} onChange={(e) => setEmailOrUsername(e.target.value)} className="w-full border rounded p-2" required />
+          <input
+            value={emailOrUsername}
+            onChange={(e) => { setEmailOrUsername(e.target.value); setError(null) }}
+            className="w-full border rounded p-2"
+            required
+            autoComplete="username"
+          />
         </label>
         <label className="block">
           <span className="text-sm">Hasło</span>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border rounded p-2" required />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setError(null) }}
+            className="w-full border rounded p-2"
+            required
+            autoComplete="current-password"
+          />
         </label>
         <button type="submit" disabled={loading} className="w-full bg-[#f1861e] hover:bg-orange-600 text-white py-2 rounded-lg">
           {loading ? "Logowanie..." : "Zaloguj się"}
@@ -93,10 +124,16 @@ export default function Login() {
       <hr className="my-6" />
 
       <div className="space-y-3">
-        <button onClick={() => signIn("google", { callbackUrl: safeCallbackUrl })} className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg">
+        <button
+          onClick={() => signIn("google", { callbackUrl: safeCallbackUrl })}
+          className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg"
+        >
           Zaloguj przez Google
         </button>
-        <button onClick={() => signIn("facebook", { callbackUrl: safeCallbackUrl })} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg">
+        <button
+          onClick={() => signIn("facebook", { callbackUrl: safeCallbackUrl })}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
+        >
           Zaloguj przez Facebook
         </button>
       </div>

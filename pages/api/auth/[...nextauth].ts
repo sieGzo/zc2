@@ -12,6 +12,7 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
+    error: "/login",                // ⬅️ custom error page (żadnych surowych ekranów NextAuth)
     verifyRequest: "/potwierdz-email-wyslany",
   },
   providers: [
@@ -26,7 +27,7 @@ export const authOptions: NextAuthOptions = {
         const password = credentials?.password ?? "";
         if (!identifier || !password) return null;
 
-        // Szukamy po email (lowercase) albo po username (bez zmian)
+        // login po emailu (lowercase) lub username
         const user = await prisma.user.findFirst({
           where: {
             OR: [
@@ -40,9 +41,8 @@ export const authOptions: NextAuthOptions = {
         const ok = await bcrypt.compare(password, user.passwordHash);
         if (!ok) return null;
 
-        // Wymagamy potwierdzenia e-maila dla kont lokalnych
+        // wymagamy potwierdzenia e-maila dla kont local credentials
         if (!user.emailVerified) {
-          // Ten tekst przeleci do res.error po signIn({ redirect:false })
           throw new Error("EmailNotVerified");
         }
 
@@ -53,7 +53,7 @@ export const authOptions: NextAuthOptions = {
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-      // allowDangerousEmailAccountLinking: false (domyślnie) – bezpieczniej
+      // allowDangerousEmailAccountLinking: false (domyślnie)
     }),
 
     Facebook({
@@ -65,7 +65,7 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async signIn({ user, account }) {
-      // Dla OAuth – jeśli user istnieje i nie ma emailVerified, oznacz jako zweryfikowany
+      // OAuth: jeśli pierwszy raz i brak emailVerified -> ustaw
       if (account && account.provider !== "credentials") {
         try {
           const dbUser = await prisma.user.findUnique({ where: { id: String(user.id) } });
@@ -92,7 +92,6 @@ export const authOptions: NextAuthOptions = {
     async redirect({ url, baseUrl }) {
       try {
         const u = new URL(url, baseUrl);
-        // pozwól na wewnętrzne ścieżki
         if (u.origin === baseUrl) return u.toString();
         return baseUrl;
       } catch {
