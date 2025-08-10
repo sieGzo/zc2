@@ -24,7 +24,7 @@ model User {
 
   accounts Account[]
   sessions Session[]
-  visitedCountries String[] @db.Text[] // np. ["PL","DE","ES"]
+  visitedCountries String[] // np. ["PL","DE","ES"]
 
   // ⬇⬇⬇ DODAJ TO POLE (backref do Route)
   routes Route[] @relation("UserRoutes")
