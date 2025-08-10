@@ -2,7 +2,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { amadeus } from '@/lib/amadeus'
 
-// Standaryzowany typ dla UI
 type Deal = {
   origin: string
   destination: string
@@ -13,7 +12,6 @@ type Deal = {
 
 const DEFAULT_ORIGINS = ['WAW', 'KRK', 'GDN', 'WRO', 'BER', 'BUD']
 
-// Fallback, gdy API padnie lub brak kluczy
 const FALLBACK: Deal[] = [
   { origin: 'WAW', destination: 'BCN', price: { amount: 289, currency: 'PLN' } },
   { origin: 'KRK', destination: 'ROM', price: { amount: 319, currency: 'PLN' } },
@@ -26,19 +24,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ ok: false, message: 'Method Not Allowed' })
   }
 
-  // Cache 1h na edge + SWR
-  res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=600')
+  // Jeśli w query jest nocache=1 → wyłącz cache
+  if (req.query.nocache === '1') {
+    res.setHeader('Cache-Control', 'no-store')
+  } else {
+    // standardowo cache 1h + stale 10 min
+    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=600')
+  }
 
   const hasKeys = !!process.env.AMADEUS_CLIENT_ID && !!process.env.AMADEUS_CLIENT_SECRET
   if (!hasKeys) {
     return res.status(200).json(FALLBACK)
   }
 
-  // Parametry zapytania (opcjonalne)
   const origins =
     typeof req.query.origins === 'string' && req.query.origins.trim()
       ? req.query.origins.split(',').map((s) => s.trim().toUpperCase())
       : DEFAULT_ORIGINS
+
   const limit = Number(req.query.limit ?? 10)
   const currency = (req.query.currency ?? 'PLN').toString().toUpperCase()
   const oneWay = (req.query.oneWay ?? 'true').toString() === 'true'
@@ -46,7 +49,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const all: Deal[] = []
 
-    // Pobieranie z API Amadeus
     for (const origin of origins) {
       const rsp = await amadeus.shopping.flightDestinations.get({
         origin,
@@ -58,8 +60,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!Array.isArray(data)) continue
 
       for (const d of data) {
-        const amount = Number(d?.price?.total ?? d?.price ?? 0)
+        const rawPrice =
+          typeof d?.price === 'object'
+            ? d?.price?.total
+            : d?.price
+        const amount = Number(rawPrice) || 0
         if (!amount) continue
+
         all.push({
           origin: d.origin,
           destination: d.destination,
@@ -70,7 +77,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // Sortuj po cenie i zwróć top N
     all.sort((a, b) => a.price.amount - b.price.amount)
     const top = all.slice(0, Math.max(1, limit))
 

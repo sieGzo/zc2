@@ -64,17 +64,17 @@ export default function Footer() {
         </div>
 
         {/* Copyright – lisek PO napisie „Zwiedzaj Chytrze”, malutki i bez obramowania */}
-        <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+        <p className="text-xs text-gray-600 dark:text-gray-400 flex flex-wrap justify-center items-center gap-1">
           © {new Date().getFullYear()}&nbsp;
-          <span className="font-semibold text-[#f1861e]">Zwiedzaj Chytrze</span>
+          <span className="font-semibold text-[#f1861e] whitespace-nowrap">Zwiedzaj Chytrze</span>
           <Image
             src="/logo.png"
             alt=""
-            width={24}
-            height={24}
+            width={20}
+            height={20}
             className="inline-block align-middle translate-y-[1px]"
           />
-          <span className="ml-1">Wszystkie prawa zastrzeżone.</span>
+          <span className="whitespace-nowrap">Wszystkie prawa zastrzeżone.</span>
         </p>
       </div>
     </footer>

@@ -26,12 +26,15 @@ export default function PromocjeLinii() {
   const listRef = useRef<HTMLUListElement>(null)
   const fmt = useMemo(() => new Intl.NumberFormat('pl-PL'), [])
 
-  const fetchFlights = async (src = source) => {
+  const fetchFlights = async (src: string) => {
     setLoading(true)
     setError(null)
+
     try {
-      const res = await fetch(`/api/${src}`, { cache: 'no-store' })
+      // Dodany parametr `_t` żeby CDN nie podał starej odpowiedzi
+      const res = await fetch(`/api/${src}?_t=${Date.now()}`, { cache: 'no-store' })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
       const data = (await res.json()) as Deal[]
 
       if (!Array.isArray(data) || data.length === 0) {
@@ -50,10 +53,12 @@ export default function PromocjeLinii() {
     }
   }
 
+  // Pobranie przy zmianie źródła
   useEffect(() => {
-    fetchFlights()
+    fetchFlights(source)
   }, [source])
 
+  // Focus na liście po załadowaniu
   useEffect(() => {
     if (listRef.current) listRef.current.focus({ preventScroll: true })
   }, [flights])
@@ -91,14 +96,14 @@ export default function PromocjeLinii() {
         ))}
       </div>
 
+      {/* Odświeżenie aktualnego źródła */}
       <button
         type="button"
         onClick={(e) => {
           e.preventDefault()
-          fetchFlights()
+          fetchFlights(source)
         }}
         className="mb-6 inline-flex items-center justify-center bg-[#f1861e] text-white px-5 py-2 rounded-full font-semibold hover:bg-orange-600 transition-colors"
-        tabIndex={-1}
       >
         🔄 Odśwież promocje
       </button>
@@ -125,8 +130,9 @@ export default function PromocjeLinii() {
           ))}
         </ul>
       ) : (
-        !loading &&
-        !error && <p className="text-gray-500 dark:text-gray-400 mt-4">Brak dostępnych promocji.</p>
+        !loading && !error && (
+          <p className="text-gray-500 dark:text-gray-400 mt-4">Brak dostępnych promocji.</p>
+        )
       )}
     </div>
   )
