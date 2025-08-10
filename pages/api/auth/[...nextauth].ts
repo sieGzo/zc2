@@ -7,33 +7,27 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-/** ---------- Turnstile helpers ---------- */
-function getTurnstileSecret() {
-  return (
-    process.env.TURNSTILE_SECRET_KEY ||
-    process.env.NEXT_TURNSTILE_SECRET || // ewentualny alias
-    ""
-  );
-}
+async function verifyTurnstile(token?: string, ip?: string | null) {
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+  if (!secret) return { ok: true, skipped: true }; // dev / feature-off
+  if (!token) return { ok: false, reason: "missing-token" };
 
-async function verifyTurnstileServer(token?: string, ip?: string) {
-  const secret = getTurnstileSecret();
-  if (!secret) {
-    // DEV/preview: nie blokujemy, jeśli nie skonfigurowano sekretu
-    return { ok: true, reason: "no-secret-dev-bypass" as const };
+  try {
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        secret,
+        response: token,
+        ...(ip ? { remoteip: ip } : {}),
+      }),
+    });
+    const data = await res.json();
+    return { ok: !!data?.success, detail: data };
+  } catch (e) {
+    return { ok: false, reason: "verify-exception", detail: String(e) };
   }
-  if (!token) return { ok: false, reason: "missing-token" as const };
-
-  const resp = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ secret, response: token, ...(ip ? { remoteip: ip } : {}) }),
-  });
-
-  const data = await resp.json().catch(() => ({}));
-  return { ok: !!data.success, detail: data };
 }
-/** -------------------------------------- */
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -49,47 +43,48 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email lub nazwa użytkownika", type: "text" },
         password: { label: "Hasło", type: "password" },
-        // Turnstile token przekazujemy z frontu pod kluczem "turnstile"
-        turnstile: { label: "turnstile", type: "text" } as any,
+        // token z Turnstile – wysyłasz go jako `turnstile` z formularza
+        turnstile: { label: "Turnstile", type: "text" },
       },
-      // @ts-ignore NextAuth przekazuje tu req (z nagłówkami) jako drugi argument
       async authorize(credentials, req) {
-        const identifier = credentials?.email?.trim();
+        const identifier = credentials?.email?.trim() ?? "";
         const password = credentials?.password ?? "";
-        const turnstileToken = (credentials as any)?.turnstile as string | undefined;
-
+        const tsToken = (credentials as any)?.turnstile as string | undefined;
         if (!identifier || !password) return null;
 
-        // IP z nagłówków (Vercel/Cloudflare)
-        const ipHeader =
-          (req?.headers?.["x-forwarded-for"] as string) ||
-          (req?.headers?.["x-real-ip"] as string) ||
-          (req?.headers?.["cf-connecting-ip"] as string) ||
-          "";
-        const ip = ipHeader.split(",")[0]?.trim();
+        // 1) Turnstile (jeśli skonfigurowany)
+        const ip =
+          (req as any)?.headers?.["cf-connecting-ip"] ||
+          (req as any)?.headers?.["x-forwarded-for"] ||
+          null;
 
-        // ✅ Weryfikacja Turnstile
-        const ts = await verifyTurnstileServer(turnstileToken, ip);
+        const ts = await verifyTurnstile(tsToken, typeof ip === "string" ? ip : null);
         if (!ts.ok) {
-          // trafi do /login?error=AccessDenied -> ładna wiadomość z mapy
-          throw new Error("AccessDenied");
+          // Będziemy widzieć error=Callback — w UI zmapowane na ludzki komunikat.
+          throw new Error("Callback");
         }
 
-        // login po emailu (lowercase) lub username
+        // 2) User by email or username (case-friendly)
+        const idLower = identifier.toLowerCase();
         const user = await prisma.user.findFirst({
           where: {
-            OR: [{ email: identifier.toLowerCase() }, { username: identifier }],
+            OR: [
+              { email: idLower },
+              { username: identifier },
+              { username: idLower }, // gdy ktoś wpisze inną wielkość znaków
+            ],
           },
         });
         if (!user || !user.passwordHash) return null;
 
-        const ok = await bcrypt.compare(password, user.passwordHash);
-        if (!ok) return null;
-
-        // wymagamy potwierdzenia e-maila dla kont local credentials
+        // 3) Email verification required for credentials
         if (!user.emailVerified) {
           throw new Error("EmailNotVerified");
         }
+
+        // 4) Password check
+        const ok = await bcrypt.compare(password, user.passwordHash);
+        if (!ok) return null;
 
         return {
           id: user.id,
@@ -112,7 +107,7 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async signIn({ user, account }) {
-      // OAuth: jeśli pierwszy raz i brak emailVerified -> ustaw
+      // OAuth: auto-verify email the first time
       if (account && account.provider !== "credentials") {
         try {
           const dbUser = await prisma.user.findUnique({ where: { id: String(user.id) } });
@@ -133,7 +128,7 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      if ((token as any)?.uid) (session.user as any).id = (token as any).uid as string;
+      if (token?.uid) (session.user as any).id = token.uid as string;
       return session;
     },
     async redirect({ url, baseUrl }) {
