@@ -77,3 +77,23 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+model Route {
+  id         String   @id @default(cuid())
+  userId     String?               // null = zapis „gościa”, jeśli pozwolisz
+  user       User?    @relation(fields: [userId], references: [id])
+
+  name       String
+  mode       String                // "walk" | "bicycle"
+  startLat   Float
+  startLon   Float
+  endLat     Float
+  endLon     Float
+
+  distance   Int                   // metry
+  time       Int                   // sekundy
+  geojson    Json                  // cała odpowiedź z Geoapify (lub okrojona)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

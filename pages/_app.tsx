@@ -6,6 +6,7 @@ import { SessionProvider } from 'next-auth/react'
 import SessionSync from '../components/SessionSync'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import 'leaflet/dist/leaflet.css';
 
 export default function MyApp({ Component, pageProps }: AppProps) {
   useEffect(() => {
