@@ -2,4 +2,4 @@
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
 
-export default dynamic(() => import('./LeafletMapInner'), { ssr: false })
+export default dynamic(() => import('./LeafletDrawMapInner'), { ssr: false })
