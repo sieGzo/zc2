@@ -4,13 +4,14 @@ import { signIn } from "next-auth/react"
 import { useRouter } from "next/router"
 import Head from "next/head"
 import Link from "next/link"
+import { Turnstile } from "@marsidev/react-turnstile"
 
 const errorMessages: Record<string, string> = {
   EmailNotVerified: "Najpierw potwierdź e-mail.",
   CredentialsSignin: "Nieprawidłowe dane logowania.",
   OAuthSignin: "Błąd logowania przez dostawcę.",
   OAuthCallback: "Błąd podczas autoryzacji dostawcy.",
-  Callback: "Błąd autoryzacji dostawcy.",            // ⬅️ DODANE
+  Callback: "Błąd autoryzacji dostawcy.",
   OAuthAccountNotLinked: "To konto jest już powiązane z inną metodą logowania.",
   AccessDenied: "Dostęp zabroniony.",
   Configuration: "Błąd konfiguracji logowania.",
@@ -24,6 +25,12 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Turnstile
+  const [turnstileToken, setTurnstileToken] = useState("")
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+  const turnstileRequired = !!siteKey // jeśli nie ma klucza (dev), nie blokujemy logowania
+
+  // „Bezpieczny” callbackUrl — nigdy nie wracamy na /login
   const safeCallbackUrl = useMemo(() => {
     const raw = typeof router.query.callbackUrl === "string" ? router.query.callbackUrl : "/"
     try {
@@ -34,6 +41,7 @@ export default function Login() {
     }
   }, [router.query.callbackUrl])
 
+  // Przechwycenie błędów NextAuth z ?error=... i komunikat „verified”
   useEffect(() => {
     if (typeof router.query.error === "string") {
       const msg = errorMessages[router.query.error] || errorMessages.default
@@ -53,6 +61,7 @@ export default function Login() {
         email: emailOrUsername,
         username: emailOrUsername,
         password,
+        turnstile: turnstileToken, // ⬅️ token wysyłamy do authorize()
       })
       if (res?.error) {
         const msg = errorMessages[res.error] || errorMessages.default
@@ -83,7 +92,7 @@ export default function Login() {
           <input
             value={emailOrUsername}
             onChange={(e) => { setEmailOrUsername(e.target.value); setError(null) }}
-            className="w-full border rounded p-2 form-contrast"   // ⬅️ klasa kontrastu
+            className="w-full border rounded p-2 form-contrast"
             required
             autoComplete="username"
           />
@@ -94,12 +103,29 @@ export default function Login() {
             type="password"
             value={password}
             onChange={(e) => { setPassword(e.target.value); setError(null) }}
-            className="w-full border rounded p-2 form-contrast"   // ⬅️ klasa kontrastu
+            className="w-full border rounded p-2 form-contrast"
             required
             autoComplete="current-password"
           />
         </label>
-        <button type="submit" disabled={loading} className="w-full bg-[#f1861e] hover:bg-orange-600 text-white py-2 rounded-lg">
+
+        {/* Turnstile — wymagamy tokenu tylko gdy siteKey istnieje */}
+        {siteKey && (
+          <div className="flex justify-center">
+            <Turnstile
+              siteKey={siteKey}
+              onSuccess={setTurnstileToken}
+              onExpire={() => setTurnstileToken("")}
+              onError={() => setTurnstileToken("")}
+            />
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading || (turnstileRequired && !turnstileToken)}
+          className="w-full bg-[#f1861e] hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 rounded-lg"
+        >
           {loading ? "Logowanie..." : "Zaloguj się"}
         </button>
       </form>
@@ -112,10 +138,16 @@ export default function Login() {
       <hr className="my-6" />
 
       <div className="space-y-3">
-        <button onClick={() => signIn("google", { callbackUrl: safeCallbackUrl })} className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg">
+        <button
+          onClick={() => signIn("google", { callbackUrl: safeCallbackUrl })}
+          className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg"
+        >
           Zaloguj przez Google
         </button>
-        <button onClick={() => signIn("facebook", { callbackUrl: safeCallbackUrl })} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg">
+        <button
+          onClick={() => signIn("facebook", { callbackUrl: safeCallbackUrl })}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
+        >
           Zaloguj przez Facebook
         </button>
       </div>

@@ -7,12 +7,40 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+/** ---------- Turnstile helpers ---------- */
+function getTurnstileSecret() {
+  return (
+    process.env.TURNSTILE_SECRET_KEY ||
+    process.env.NEXT_TURNSTILE_SECRET || // ewentualny alias
+    ""
+  );
+}
+
+async function verifyTurnstileServer(token?: string, ip?: string) {
+  const secret = getTurnstileSecret();
+  if (!secret) {
+    // DEV/preview: nie blokujemy, jeśli nie skonfigurowano sekretu
+    return { ok: true, reason: "no-secret-dev-bypass" as const };
+  }
+  if (!token) return { ok: false, reason: "missing-token" as const };
+
+  const resp = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ secret, response: token, ...(ip ? { remoteip: ip } : {}) }),
+  });
+
+  const data = await resp.json().catch(() => ({}));
+  return { ok: !!data.success, detail: data };
+}
+/** -------------------------------------- */
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
-    error: "/login",                // ⬅️ custom error page (żadnych surowych ekranów NextAuth)
+    error: "/login",
     verifyRequest: "/potwierdz-email-wyslany",
   },
   providers: [
@@ -21,19 +49,36 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email lub nazwa użytkownika", type: "text" },
         password: { label: "Hasło", type: "password" },
+        // Turnstile token przekazujemy z frontu pod kluczem "turnstile"
+        turnstile: { label: "turnstile", type: "text" } as any,
       },
-      async authorize(credentials) {
+      // @ts-ignore NextAuth przekazuje tu req (z nagłówkami) jako drugi argument
+      async authorize(credentials, req) {
         const identifier = credentials?.email?.trim();
         const password = credentials?.password ?? "";
+        const turnstileToken = (credentials as any)?.turnstile as string | undefined;
+
         if (!identifier || !password) return null;
+
+        // IP z nagłówków (Vercel/Cloudflare)
+        const ipHeader =
+          (req?.headers?.["x-forwarded-for"] as string) ||
+          (req?.headers?.["x-real-ip"] as string) ||
+          (req?.headers?.["cf-connecting-ip"] as string) ||
+          "";
+        const ip = ipHeader.split(",")[0]?.trim();
+
+        // ✅ Weryfikacja Turnstile
+        const ts = await verifyTurnstileServer(turnstileToken, ip);
+        if (!ts.ok) {
+          // trafi do /login?error=AccessDenied -> ładna wiadomość z mapy
+          throw new Error("AccessDenied");
+        }
 
         // login po emailu (lowercase) lub username
         const user = await prisma.user.findFirst({
           where: {
-            OR: [
-              { email: identifier.toLowerCase() },
-              { username: identifier },
-            ],
+            OR: [{ email: identifier.toLowerCase() }, { username: identifier }],
           },
         });
         if (!user || !user.passwordHash) return null;
@@ -46,20 +91,22 @@ export const authOptions: NextAuthOptions = {
           throw new Error("EmailNotVerified");
         }
 
-        return { id: user.id, email: user.email ?? undefined, name: user.username ?? undefined } as any;
+        return {
+          id: user.id,
+          email: user.email ?? undefined,
+          name: user.username ?? undefined,
+        } as any;
       },
     }),
 
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-      // allowDangerousEmailAccountLinking: false (domyślnie)
     }),
 
     Facebook({
       clientId: process.env.FACEBOOK_CLIENT_ID || "",
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET || "",
-      // allowDangerousEmailAccountLinking: false (domyślnie)
     }),
   ],
 
@@ -86,7 +133,7 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      if (token?.uid) (session.user as any).id = token.uid as string;
+      if ((token as any)?.uid) (session.user as any).id = (token as any).uid as string;
       return session;
     },
     async redirect({ url, baseUrl }) {
