@@ -9,32 +9,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ ok: false, message: 'Metoda niedozwolona' })
   }
 
-  // pobieramy tylko pierwszy element, jeśli query param jest tablicą
+  // weź pierwszy element jeśli ktoś przysłał tablicę
   const emailParam = Array.isArray(req.query.email) ? req.query.email[0] : req.query.email
   const usernameParam = Array.isArray(req.query.username) ? req.query.username[0] : req.query.username
 
-  if (!emailParam && !usernameParam) {
-    return res.status(400).json({ ok: false, message: 'Brakuje parametru email lub username' })
-  }
-
   try {
-    const emailTaken =
-      typeof emailParam === 'string'
-        ? !!(await prisma.user.findUnique({
-            where: { email: emailParam.trim().toLowerCase() },
-          }))
-        : false
+    let emailTaken = false
+    let usernameTaken = false
 
-    const usernameTaken =
-      typeof usernameParam === 'string'
-        ? !!(await prisma.user.findUnique({
-            where: { username: usernameParam.trim() },
-          }))
-        : false
+    if (typeof emailParam === 'string' && emailParam.trim()) {
+      const e = emailParam.trim().toLowerCase()
+      const found = await prisma.user.findFirst({ where: { email: e }, select: { id: true } })
+      emailTaken = !!found
+    }
+
+    if (typeof usernameParam === 'string' && usernameParam.trim()) {
+      const u = usernameParam.trim()
+      const found = await prisma.user.findFirst({ where: { username: u }, select: { id: true } })
+      usernameTaken = !!found
+    }
 
     return res.status(200).json({ ok: true, emailTaken, usernameTaken })
-  } catch (error) {
-    console.error('❌ Błąd w check-availability:', error)
-    return res.status(500).json({ ok: false, message: 'Błąd serwera. Spróbuj ponownie później.' })
+  } catch (error: any) {
+    console.error('❌ check-availability error:', error?.message || error)
+    // Nie blokujemy flow rejestracji 500-ką:
+    return res.status(200).json({ ok: true, emailTaken: false, usernameTaken: false })
   }
 }
