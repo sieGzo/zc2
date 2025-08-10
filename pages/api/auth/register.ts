@@ -5,33 +5,39 @@ import { randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).end()
-
-  const { username, email, password, turnstileToken } = req.body as {
-    username?: string; email?: string; password?: string; turnstileToken?: string;
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Metoda niedozwolona' })
   }
 
+  const { username, email, password, turnstileToken } = req.body as {
+    username?: string
+    email?: string
+    password?: string
+    turnstileToken?: string
+  }
+
+  // --- Walidacja podstawowa ---
   if (!username || !email || !password) {
     return res.status(400).json({ message: 'Brakuje wymaganych danych.' })
   }
 
-  // ✅ Walidacja hasła
+  // --- Walidacja hasła ---
   if (password.length < 8 || !/[A-Z]/.test(password) || !/[^a-zA-Z0-9]/.test(password)) {
     return res.status(400).json({
-      message: 'Hasło musi mieć min. 8 znaków, 1 wielką literę i 1 znak specjalny.',
+      message: 'Hasło musi mieć min. 8 znaków, 1 wielką literę i 1 znak specjalny.',
     })
   }
 
-  // ✅ Walidacja emaila + normalizacja
+  // --- Walidacja i normalizacja e-maila ---
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   const normalizedEmail = String(email).trim().toLowerCase()
   if (!emailRegex.test(normalizedEmail)) {
     return res.status(400).json({ message: 'Nieprawidłowy adres e-mail.' })
   }
 
-  // ✅ Weryfikacja Turnstile (dotyczy tylko tej ścieżki — OAuth nie używa)
+  // --- Weryfikacja Turnstile ---
   if (!process.env.TURNSTILE_SECRET_KEY) {
-    console.warn('Brakuje TURNSTILE_SECRET_KEY w zmiennych środowiskowych — rejestracja bez weryfikacji (DEV).')
+    console.warn('⚠️ Brakuje TURNSTILE_SECRET_KEY — rejestracja bez weryfikacji (tryb DEV).')
   } else {
     try {
       const cfRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
@@ -43,17 +49,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }),
       })
       const cfData = await cfRes.json()
+
       if (!cfData.success) {
         console.error('❌ Nieudana weryfikacja Turnstile:', cfData)
         return res.status(400).json({ message: 'Weryfikacja nie powiodła się. Spróbuj ponownie.' })
       }
     } catch (e) {
-      console.warn('Nie udało się zweryfikować Turnstile:', e)
+      console.warn('⚠️ Nie udało się zweryfikować Turnstile:', e)
+      return res.status(400).json({ message: 'Błąd weryfikacji zabezpieczenia. Spróbuj ponownie.' })
     }
   }
 
   try {
-    // ✅ Sprawdzenie czy email/username już istnieją
+    // --- Sprawdzenie unikalności ---
     const [existingEmail, existingUsername] = await Promise.all([
       prisma.user.findUnique({ where: { email: normalizedEmail } }),
       prisma.user.findUnique({ where: { username } }),
@@ -66,7 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(409).json({ message: 'Nazwa użytkownika jest już zajęta.' })
     }
 
-    // 🔐 Haszowanie i zapis
+    // --- Haszowanie hasła i generowanie tokenu ---
     const passwordHash = await bcrypt.hash(password, 10)
     const token = randomBytes(32).toString('hex')
 
@@ -80,15 +88,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     })
 
-    // 📧 Wyślij mail z tokenem (best-effort)
+    // --- Wysyłka maila weryfikacyjnego ---
     try {
       await sendVerificationEmail(normalizedEmail, token)
     } catch (e) {
-      console.warn('Nie udało się wysłać maila weryfikacyjnego:', e)
+      console.warn('⚠️ Nie udało się wysłać maila weryfikacyjnego:', e)
     }
 
     return res.status(200).json({
-      message: 'Sprawdź e-mail i potwierdź rejestrację.',
+      message: 'Sprawdź e-mail i potwierdź rejestrację.',
       id: newUser.id,
       username: newUser.username,
     })
