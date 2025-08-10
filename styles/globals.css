@@ -54,18 +54,44 @@ html, body {
 }
 
 /* Tryby dostępności */
+/* Tryb wysokiego kontrastu – poprawiony */
 body.contrast {
   background-color: #000 !important;
   color: #fff !important;
-  filter: invert(100%) hue-rotate(180deg);
 }
 
+body.contrast a {
+  color: #ffeb3b !important; /* żółte linki dla czytelności */
+}
+
+body.contrast header,
+body.contrast nav,
+body.contrast footer,
+body.contrast main,
+body.contrast section,
+body.contrast article {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
+
+/* Nie odwracaj multimediów */
 body.contrast img,
 body.contrast video,
 body.contrast picture,
 body.contrast svg,
 body.contrast canvas {
-  filter: invert(100%) hue-rotate(180deg);
+  filter: none !important;
+}
+
+/* Podbij kontrast elementów UI */
+body.contrast button,
+body.contrast input,
+body.contrast select,
+body.contrast textarea {
+  background-color: #222 !important;
+  color: #fff !important;
+  border-color: #fff !important;
 }
 
 body.large-font {

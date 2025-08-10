@@ -24,7 +24,7 @@ export default function AccessPanel() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-60 sm:w-72 rounded-xl shadow-2xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-md text-sm text-gray-800 dark:text-gray-100 p-4 space-y-2 border border-gray-300 dark:border-gray-700 z-[100]">
+        <div className="absolute right-0 sm:right-auto sm:left-0 mt-2 w-60 sm:w-72 rounded-xl shadow-2xl bg-white dark:bg-gray-800 backdrop-blur-md text-sm text-gray-800 dark:text-gray-100 p-4 space-y-2 border border-gray-300 dark:border-gray-700 z-[100]">
           {[
             { icon: <MdOutlineContrast className="min-w-[20px]" />, label: 'Kontrast', class: 'contrast' },
             { icon: <PiTextAa className="min-w-[20px]" />, label: 'Rozmiar tekstu', class: 'large-font' },

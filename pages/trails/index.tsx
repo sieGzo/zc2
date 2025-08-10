@@ -139,8 +139,9 @@ const time = sumProps(route, "time");     // sekundy
           onSelect={(lat, lon, name) => {
             setStart([lat, lon]);
             if (name) setStartLabel(name);
-            setPointStep("end");
+            setTimeout(() => setPointStep("end"), 0); // mała pauza by uniknąć podwójnego triggera
           }}
+
         />
         <GeoAutocomplete
           label="Punkt docelowy"
