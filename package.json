@@ -1,12 +1,15 @@
 {
   "name": "zwiedzajchytrze",
   "version": "1.0.0",
+  "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "postinstall": "prisma generate",
-    "migrate:deploy": "prisma migrate deploy"
+    "migrate:deploy": "prisma migrate deploy",
+    "migrate:dev": "prisma migrate dev",
+    "prisma:generate": "prisma generate"
   },
   "engines": {
     "node": "20.x"
