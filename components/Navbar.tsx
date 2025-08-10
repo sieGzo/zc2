@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useAuth } from '../hooks/useAuth'
+import { useAuth } from '@/hooks/useAuth'
 import ThemeToggle from './ThemeToggle'
 import { Menu, X } from 'lucide-react'
 
