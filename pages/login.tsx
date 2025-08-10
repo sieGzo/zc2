@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/router"
 import Head from "next/head"
+import Link from "next/link"
 
 export default function Login() {
   const router = useRouter()
@@ -21,26 +22,9 @@ export default function Login() {
     }
   }, [router.query.callbackUrl])
 
-  // Strip ?callbackUrl=/ or ?callbackUrl=/login... from the address (no reload)
-  useEffect(() => {
-    if (!router.isReady) return
-    const raw = typeof router.query.callbackUrl === "string" ? router.query.callbackUrl : null
-    if (!raw) return
-    try {
-      const u = new URL(raw, window.location.origin)
-      if (u.pathname === "/" || u.pathname.startsWith("/login")) {
-        router.replace("/login", undefined, { shallow: true })
-      }
-    } catch {
-      if (raw === "/" || raw.includes("/login")) {
-        router.replace("/login", undefined, { shallow: true })
-      }
-    }
-  }, [router.isReady, router.query.callbackUrl])
-
   useEffect(() => {
     if (typeof router.query.error === "string") {
-      setError(router.query.error === "EmailNotVerified" ? "Najpierw potwierdź e‑mail." : router.query.error)
+      setError(router.query.error === "EmailNotVerified" ? "Najpierw potwierdź e-mail." : router.query.error)
     }
   }, [router.query.error])
 
@@ -49,13 +33,21 @@ export default function Login() {
     setLoading(true)
     setError(null)
     try {
-      await signIn("credentials", {
-        redirect: true,
+      const res = await signIn("credentials", {
+        redirect: false,
         callbackUrl: safeCallbackUrl,
         email: emailOrUsername,
         username: emailOrUsername,
         password,
       })
+
+      if (res?.error) {
+        setError(res.error === "EmailNotVerified" ? "Najpierw potwierdź e-mail." : "Nieprawidłowe dane logowania.")
+        return
+      }
+      if (res?.url) {
+        router.push(res.url)
+      }
     } finally {
       setLoading(false)
     }
@@ -65,6 +57,12 @@ export default function Login() {
     <section className="max-w-lg mx-auto my-14 p-6 bg-white dark:bg-gray-900 rounded-2xl shadow">
       <Head><title>Logowanie — Zwiedzaj Chytrze</title></Head>
       <h1 className="text-3xl font-extrabold text-center mb-6">Zaloguj się</h1>
+
+      {router.query.verified === "1" && (
+        <div className="mb-4 bg-green-100 text-green-700 p-3 rounded">
+          Adres e-mail został potwierdzony. Możesz się zalogować.
+        </div>
+      )}
       {error && <div className="mb-4 bg-red-100 text-red-700 p-3 rounded">{error}</div>}
 
       <form onSubmit={handleCredentials} className="space-y-3">
@@ -80,6 +78,17 @@ export default function Login() {
           {loading ? "Logowanie..." : "Zaloguj się"}
         </button>
       </form>
+
+      <div className="mt-4 text-center text-sm space-y-1">
+        <p>
+          Nie masz konta?{" "}
+          <Link href="/register" className="text-[#f1861e] underline">Zarejestruj się</Link>
+        </p>
+        <p>
+          Zapomniałeś hasła?{" "}
+          <Link href="/reset-hasla" className="underline">Zresetuj</Link>
+        </p>
+      </div>
 
       <hr className="my-6" />
 

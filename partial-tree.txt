@@ -1,0 +1,33 @@
+
+C:\Users\Gierki\zwiedzajchytrze-clean
+├── .env
+├── .env.local
+├── .git
+├── .gitignore
+├── .next
+├── components
+├── git
+├── hooks
+├── lib
+├── middleware.ts
+├── next-env.d.ts
+├── next.config.js
+├── node_modules
+├── package-lock.json
+├── package.json
+├── pages
+├── partial-tree.txt
+├── PATCH_NOTES.md
+├── postcss.config.js
+├── prisma
+├── public
+├── README.txt
+├── styles
+├── tailwind.config.js
+└── tsconfig.json
+
+directory: 10 file: 15
+
+
+
+[2K[1G
