@@ -7,104 +7,77 @@ import { FaTiktok, FaInstagram, FaFacebook, FaYoutube, FaHashtag } from 'react-i
 
 type VisitStats = { total: number; today: number; month: number; unique: number }
 
-function StatCard({
+function Pill({
   label,
   value,
   loading,
   emoji,
-}: {
-  label: string
-  value?: number
-  loading?: boolean
-  emoji: string
-}) {
+}: { label: string; value?: number; loading?: boolean; emoji: string }) {
   const fmt = useMemo(() => new Intl.NumberFormat('pl-PL'), [])
   return (
     <div
-      className="rounded-xl border border-gray-200/70 bg-white px-4 py-3 shadow-sm
-                 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-100"
-      aria-live="polite"
+      className="rounded-full px-3 py-1.5 text-[12px] leading-none
+                 bg-white/70 border border-gray-200/70
+                 dark:bg-gray-800/60 dark:border-gray-700
+                 flex items-center justify-center gap-1"
     >
-      <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
-      {loading ? (
-        <div className="mt-1 h-6 w-20 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-      ) : (
-        <div className="mt-1 text-lg font-semibold flex items-center justify-center gap-2">
-          <span aria-hidden>{emoji}</span>
-          <span>{fmt.format(value ?? 0)}</span>
-        </div>
-      )}
+      <span aria-hidden className="text-[13px]">{emoji}</span>
+      <span className="font-medium">{loading ? '…' : fmt.format(value ?? 0)}</span>
+      <span className="pl-1 text-gray-500 dark:text-gray-400">{label}</span>
     </div>
   )
 }
 
 export default function Footer() {
+  const SHOW_STATS =
+    (process.env.NEXT_PUBLIC_SHOW_VISIT_STATS ?? 'true').toLowerCase() !== 'false'
+
   const [visits, setVisits] = useState<VisitStats | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!SHOW_STATS) return
     const ac = new AbortController()
     fetch('/api/auth/counter', { signal: ac.signal, cache: 'no-store' })
-      .then((res) => {
-        if (!res.ok) throw new Error('Błąd odpowiedzi z serwera')
-        return res.json()
-      })
-      .then((data) => {
-        setVisits(data)
-        setError(null)
-      })
-      .catch((err) => {
-        if (err.name !== 'AbortError') setError('Nie udało się pobrać statystyk')
-      })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => setVisits(d))
+      .catch(() => {})
     return () => ac.abort()
-  }, [])
+  }, [SHOW_STATS])
 
-  const loading = !visits && !error
+  const loading = SHOW_STATS && !visits
 
   return (
-    <footer className="mt-16 border-t bg-gray-50/70 px-4 py-12 text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
-      <div className="mx-auto max-w-6xl flex flex-col items-center text-center gap-8">
-        {/* Logo */}
-        <Image
-          src="/logo.png"
-          alt="Zwiedzaj Chytrze"
-          width={96}
-          height={96}
-          className="h-16 w-16 rounded-lg ring-1 ring-gray-200 dark:ring-gray-800"
-        />
+    <footer className="mt-16 border-t bg-gray-50/60 dark:border-gray-800 dark:bg-gray-900/80">
+      <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col items-center text-center gap-6">
+        {/* Statystyki – małe „pills”. Dodaj NEXT_PUBLIC_SHOW_VISIT_STATS=false aby ukryć */}
+        {SHOW_STATS && (
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Pill label="ogółem"   value={visits?.total}  loading={loading} emoji="🔢" />
+            <Pill label="dziś"     value={visits?.today}  loading={loading} emoji="📅" />
+            <Pill label="miesiąc"  value={visits?.month}  loading={loading} emoji="🗓️" />
+            <Pill label="unikalni" value={visits?.unique} loading={loading} emoji="👥" />
+          </div>
+        )}
 
-        {/* Statystyki */}
-        <div className="w-full max-w-2xl grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard label="Odwiedzin ogółem" value={visits?.total} loading={loading} emoji="🔢" />
-          <StatCard label="Dziś" value={visits?.today} loading={loading} emoji="📅" />
-          <StatCard label="W tym miesiącu" value={visits?.month} loading={loading} emoji="🗓️" />
-          <StatCard label="Unikalni goście" value={visits?.unique} loading={loading} emoji="👥" />
+        {/* Sociale – mniejsze, delikatny hover */}
+        <div className="flex items-center gap-4 text-xl text-[#f1861e]">
+          <Link href="https://www.youtube.com/@zwiedzajchytrze" target="_blank" aria-label="YouTube" className="transition-opacity hover:opacity-80"><FaYoutube /></Link>
+          <Link href="https://www.threads.com/@zwiedzajchytrze"   target="_blank" aria-label="Threads" className="transition-opacity hover:opacity-80"><FaHashtag /></Link>
+          <Link href="https://www.tiktok.com/@zwiedzajchytrze"    target="_blank" aria-label="TikTok"   className="transition-opacity hover:opacity-80"><FaTiktok /></Link>
+          <Link href="https://www.instagram.com/zwiedzajchytrze/" target="_blank" aria-label="Instagram"className="transition-opacity hover:opacity-80"><FaInstagram /></Link>
+          <Link href="https://www.facebook.com/profile.php?id=61578581730371" target="_blank" aria-label="Facebook" className="transition-opacity hover:opacity-80"><FaFacebook /></Link>
         </div>
 
-        {error && <div className="text-xs text-red-500">{error}</div>}
-
-        {/* Sociale */}
-        <div className="flex items-center justify-center gap-5 text-2xl text-[#f1861e]">
-          <Link href="https://www.youtube.com/@zwiedzajchytrze" target="_blank" aria-label="YouTube" className="transition-transform hover:scale-110">
-            <FaYoutube />
-          </Link>
-          <Link href="https://www.threads.com/@zwiedzajchytrze" target="_blank" aria-label="Threads" className="transition-transform hover:scale-110">
-            <FaHashtag />
-          </Link>
-          <Link href="https://www.tiktok.com/@zwiedzajchytrze" target="_blank" aria-label="TikTok" className="transition-transform hover:scale-110">
-            <FaTiktok />
-          </Link>
-          <Link href="https://www.instagram.com/zwiedzajchytrze/" target="_blank" aria-label="Instagram" className="transition-transform hover:scale-110">
-            <FaInstagram />
-          </Link>
-          <Link href="https://www.facebook.com/profile.php?id=61578581730371" target="_blank" aria-label="Facebook" className="transition-transform hover:scale-110">
-            <FaFacebook />
-          </Link>
-        </div>
-
-        {/* Copyright */}
-        <p className="text-sm">
-          &copy; {new Date().getFullYear()} <span className="font-semibold text-[#f1861e]">Zwiedzaj Chytrze</span>. Wszystkie prawa zastrzeżone.
+        {/* Copyright z malutkim liskiem */}
+        <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
+          <Image
+            src="/logo.png"
+            alt=""
+            width={16}
+            height={16}
+            className="inline-block rounded-sm ring-1 ring-gray-200 dark:ring-gray-700"
+          />
+          © {new Date().getFullYear()} <span className="font-semibold text-[#f1861e]">Zwiedzaj Chytrze</span>. Wszystkie prawa zastrzeżone.
         </p>
       </div>
     </footer>
