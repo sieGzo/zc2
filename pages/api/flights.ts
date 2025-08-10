@@ -29,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Cache-Control', 'no-store')
   } else {
     // standardowo cache 1h + stale 10 min
-    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=600')
+    res.setHeader('Cache-Control', 'no-store')
   }
 
   const hasKeys = !!process.env.AMADEUS_CLIENT_ID && !!process.env.AMADEUS_CLIENT_SECRET
