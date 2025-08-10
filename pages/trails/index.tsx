@@ -119,8 +119,8 @@ const time = sumProps(route, "time");     // sekundy
       })
     })
     .then(async r => {
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data?.błąd || "Nie udało się zapisać trasy");
+      const data = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(data?.error || "Nie udało się zapisać trasy")
       alert("Trasa zapisana. Wejdź w: /trails/moje");
     })
     .catch(err => alert(err.message));

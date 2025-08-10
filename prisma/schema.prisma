@@ -8,22 +8,25 @@ datasource db {
 }
 
 model User {
-  id               String   @id @default(cuid())
-  email            String   @unique
-  username         String   @unique
+  id               String    @id @default(cuid())
+  email            String    @unique
+  username         String    @unique
   passwordHash     String
   emailVerified    DateTime?
-  emailToken       String?  @unique
+  emailToken       String?   @unique
   resetToken       String?
   resetTokenExpiry DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  name             String?
-  age              Int?
+  name String?
+  age  Int?
 
-  accounts         Account[]
-  sessions         Session[]
+  accounts Account[]
+  sessions Session[]
+
+  // ⬇⬇⬇ DODAJ TO POLE (backref do Route)
+  routes Route[] @relation("UserRoutes")
 }
 
 model NewsletterSubscriber {
@@ -43,18 +46,18 @@ model Visit {
 
 // required by next-auth
 model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?    @db.Text
-  access_token       String?    @db.Text
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?    @db.Text
-  session_state      String?
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
 
   user User @relation(fields: [userId], references: [id])
 
@@ -79,21 +82,21 @@ model VerificationToken {
 }
 
 model Route {
-  id         String   @id @default(cuid())
-  userId     String?               // null = zapis „gościa”, jeśli pozwolisz
-  user       User?    @relation(fields: [userId], references: [id])
+  id     String  @id @default(cuid())
+  userId String?
+  user   User?   @relation("UserRoutes", fields: [userId], references: [id])
 
-  name       String
-  mode       String                // "walk" | "bicycle"
-  startLat   Float
-  startLon   Float
-  endLat     Float
-  endLon     Float
+  name     String
+  mode     String
+  startLat Float
+  startLon Float
+  endLat   Float
+  endLon   Float
 
-  distance   Int                   // metry
-  time       Int                   // sekundy
-  geojson    Json                  // cała odpowiedź z Geoapify (lub okrojona)
+  distance Int
+  time     Int
+  geojson  Json
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
