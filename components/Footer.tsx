@@ -70,8 +70,8 @@ export default function Footer() {
           <Image
             src="/logo.png"
             alt=""
-            width={14}
-            height={14}
+            width={24}
+            height={24}
             className="inline-block align-middle translate-y-[1px]"
           />
           <span className="ml-1">Wszystkie prawa zastrzeżone.</span>
