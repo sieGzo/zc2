@@ -35,40 +35,56 @@ export default function Home() {
       </Head>
 
       <main className="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-        {/* HERO — czysty, skupiony na dwóch ścieżkach */}
-        <section className="relative w-full py-14 px-4 md:px-8 bg-gradient-to-br from-[#f1861e]/10 via-white to-[#f1861e]/10 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-          <div className="max-w-6xl mx-auto text-center">
-            <p className="inline-flex items-center gap-2 text-[13px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              🦊 Zwiedzaj mądrze. Zwiedzaj chytrze.
-            </p>
-            <h1 className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight">
-              Planer tras + blog podróżniczy
-            </h1>
-            <p className="mt-4 text-lg md:text-xl text-gray-700 dark:text-gray-300">
-              Zaplanuj pieszo lub rowerem, zapisz trasę i wróć do niej później.
-              A gdy szukasz pomysłów — wpadnij na bloga po świeże inspiracje.
-            </p>
+      {/* HERO — wyraźny nagłówek w brandzie + poprawione buttony */}
+      <section className="relative w-full py-16 px-4 md:px-8">
+        {/* delikatny pas w kolorze marki za nagłówkiem */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#f1861e]/15 to-transparent dark:from-[#f1861e]/10" />
 
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link
-                href="/trails"
-                className="w-full sm:w-auto inline-flex items-center justify-center rounded-full px-6 py-3 font-semibold bg-[#f1861e] text-white hover:bg-orange-600 transition"
-              >
-                🚀 Otwórz planer trasy
-              </Link>
-              <Link
-                href="/blog"
-                className="w-full sm:w-auto inline-flex items-center justify-center rounded-full px-6 py-3 font-semibold border border-[#f1861e] text-[#f1861e] hover:bg-orange-50 dark:hover:bg-gray-800 transition"
-              >
-                📖 Przejdź do bloga
-              </Link>
-            </div>
+        <div className="relative max-w-6xl mx-auto text-center">
+          <p className="inline-flex items-center gap-2 text-[13px] uppercase tracking-wider text-[#f1861e]">
+            🦊 Zwiedzaj mądrze. Zwiedzaj chytrze.
+          </p>
 
-            <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">
-              Bez logowania zaplanujesz trasę; zapis wymaga konta (sekundy).
-            </div>
+          {/* H1: pierwsza część w kolorze marki */}
+          <h1 className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight">
+            <span className="text-[#f1861e]">Planer tras</span>
+            <span className="text-gray-900 dark:text-white"> + blog podróżniczy</span>
+          </h1>
+
+          <p className="mt-4 text-lg md:text-xl text-gray-700 dark:text-gray-300">
+            Zaplanuj pieszo lub rowerem, zapisz trasę i wróć do niej później.
+            A gdy szukasz pomysłów — wpadnij na bloga po świeże inspiracje.
+          </p>
+
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            {/* Primary */}
+            <Link
+              href="/trails"
+              className="w-full sm:w-auto inline-flex items-center justify-center rounded-full px-6 py-3 font-semibold
+                        bg-[#f1861e] text-white hover:bg-orange-600 focus-visible:outline-none
+                        focus-visible:ring-2 focus-visible:ring-[#f1861e] transition-colors"
+            >
+              🚀 Otwórz planer trasy
+            </Link>
+
+            {/* Secondary (outline) — poprawiony hover */}
+            <Link
+              href="/blog"
+              className="w-full sm:w-auto inline-flex items-center justify-center rounded-full px-6 py-3 font-semibold
+                        border-2 border-[#f1861e] text-[#f1861e]
+                        hover:bg-[#f1861e]/10 hover:border-orange-600 hover:text-orange-600
+                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f1861e]
+                        transition-colors"
+            >
+              📖 Przejdź do bloga
+            </Link>
           </div>
-        </section>
+
+    <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+      Bez logowania zaplanujesz trasę; zapis wymaga konta (sekundy).
+    </div>
+  </div>
+</section>
 
         {/* Krótkie video – może zostać jako smaczek */}
         <IntroVideo />
