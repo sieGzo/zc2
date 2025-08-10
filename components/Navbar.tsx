@@ -1,17 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import { useAuth } from '../hooks/useauth'
 import ThemeToggle from './ThemeToggle'
 import AccessPanel from './AccessPanel'
 import { Menu, X } from 'lucide-react'
 
 export default function Navbar() {
+  const router = useRouter()
   const { user, logout, loading } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const toggleMenu = () => setIsOpen(v => !v)
+
+  // Zamknij mobilne menu przy zmianie strony
+  useEffect(() => {
+    const handleRoute = () => setIsOpen(false)
+    router.events.on('routeChangeStart', handleRoute)
+    return () => router.events.off('routeChangeStart', handleRoute)
+  }, [router.events])
+
+  // Zamknij mobilne menu gdy szerokość wskoczy na >= 1280px (xl)
+  useEffect(() => {
+    const onResize = () => {
+      if (typeof window !== 'undefined' && window.innerWidth >= 1280) setIsOpen(false)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const NavLinks = ({ onClick }: { onClick?: () => void }) => (
     <>
@@ -45,7 +63,7 @@ export default function Navbar() {
         <Link href="/login" prefetch={false} className={`px-3 py-1 rounded bg-[#f1861e] text-white hover:bg-orange-600 ${mobile ? 'w-full text-center' : ''}`}>
           Zaloguj
         </Link>
-        <Link href="/register" prefetch={false} className={`px-3 py-1 rounded border border-[#f1861e] text-[#f1861e] hover:bg-orange-50 ${mobile ? 'w-full text-center' : ''}`}>
+        <Link href="/register" prefetch={false} className={`px-3 py-1 rounded border border-[#f1861e] text-[#f1861e] hover:bg-orange-50 dark:hover:bg-gray-800 ${mobile ? 'w-full text-center' : ''}`}>
           Rejestracja
         </Link>
       </div>
@@ -60,8 +78,8 @@ export default function Navbar() {
           <span className="font-bold text-lg">Zwiedzaj Chytrze</span>
         </Link>
 
-        {/* Desktop */}
-        <div className="hidden md:flex items-center gap-5">
+        {/* Desktop/Tablet: pokazuj pełne menu dopiero od XL (≥1280px) */}
+        <div className="hidden xl:flex items-center gap-5">
           <div className="flex items-center gap-5">
             <NavLinks />
           </div>
@@ -72,15 +90,21 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile toggle */}
-        <button className="md:hidden p-2" onClick={toggleMenu} aria-label="Menu">
+        {/* Mobile/Phone/Tablet (także poziomo): hamburger do <1280px */}
+        <button
+          className="xl:hidden p-2"
+          onClick={toggleMenu}
+          aria-label="Menu"
+          aria-controls="mobile-nav"
+          aria-expanded={isOpen}
+        >
           {isOpen ? <X /> : <Menu />}
         </button>
       </div>
 
       {/* Mobile menu */}
       {isOpen && (
-        <div className="md:hidden px-4 pb-4 border-t border-gray-200 dark:border-gray-800">
+        <div id="mobile-nav" className="xl:hidden px-4 pb-4 border-t border-gray-200 dark:border-gray-800">
           <div className="flex flex-col items-center gap-3 py-3">
             <NavLinks onClick={() => setIsOpen(false)} />
           </div>
