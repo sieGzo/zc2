@@ -4,10 +4,9 @@ import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { prisma } from "@/lib/prisma"; // użyj singletone z lib/prisma.ts (masz w repo)
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-// <<< TO JEST KLUCZOWE: nazwany eksport z opcjami >>>
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -31,14 +30,12 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) return null;
         const identifier = String(credentials.email).trim().toLowerCase();
 
-        // login po email lub username
         const user = await prisma.user.findFirst({
           where: { OR: [{ email: identifier }, { username: credentials.email }] },
         });
         if (!user || !user.passwordHash) return null;
 
         if (!user.emailVerified) {
-          // specjalny błąd — możesz go obsłużyć po stronie UI
           throw new Error("EmailNotVerified");
         }
 
@@ -50,26 +47,30 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   session: { strategy: "jwt" },
-  pages: { signIn: "/login" }, // u Ciebie jest /login
+  pages: { signIn: "/login" },
   callbacks: {
+    async signIn({ user, account, profile }) {
+      console.log("SIGNIN CALLBACK:", { user, account, profile });
+      return true; // jeśli zwrócisz false -> user się nie zapisze
+    },
     async redirect({ url, baseUrl }) {
       try {
         const u = new URL(url, baseUrl);
-        if (u.pathname.startsWith("/login")) return baseUrl + "/";
         if (u.origin === baseUrl) return u.toString();
-        return baseUrl + "/";
+        return baseUrl;
       } catch {
-        return baseUrl + "/";
+        return baseUrl;
       }
     },
     async session({ session, token }) {
-      if (token?.sub) (session.user as any).id = token.sub;
+      if (token?.sub) {
+        (session.user as any).id = token.sub;
+      }
       return session;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: false,
+  debug: true, // włączone logi
 };
 
-// <<< default export – handler NextAuth korzystający z powyższych opcji >>>
 export default NextAuth(authOptions);

@@ -9,9 +9,12 @@ datasource db {
 
 model User {
   id               String    @id @default(cuid())
-  email            String    @unique
-  username         String    @unique
-  passwordHash     String
+  // DLA NextAuth: email może być null (nie zawsze dostępny), unikalny gdy istnieje
+  email            String?   @unique
+  // DLA Credentials: login po username — ale NIE wymagaj dla OAuth
+  username         String?   @unique
+  // DLA Credentials: hasło tylko dla kont lokalnych — NIE wymagaj dla OAuth
+  passwordHash     String?
   emailVerified    DateTime?
   emailToken       String?   @unique
   resetToken       String?
@@ -19,14 +22,15 @@ model User {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  name String?
-  age  Int?
+  name   String?
+  image  String?   // typowe pole używane przez NextAuth
+  age    Int?
 
   accounts Account[]
   sessions Session[]
   visitedCountries String[] // np. ["PL","DE","ES"]
 
-  // ⬇⬇⬇ DODAJ TO POLE (backref do Route)
+  // Backref do Route
   routes Route[] @relation("UserRoutes")
 }
 
@@ -45,22 +49,22 @@ model Visit {
   createdAt DateTime @default(now())
 }
 
-// required by next-auth
+// wymagane przez NextAuth (dopasowane do adaptera)
 model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -71,7 +75,7 @@ model Session {
   userId       String
   expires      DateTime
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
