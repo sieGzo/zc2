@@ -31,9 +31,22 @@ async function verifyTurnstile(token?: string, ip?: string | string[]) {
         ...(typeof ip === 'string' ? { remoteip: ip } : {}),
       }),
     });
+
     const data = await resp.json();
+
+    // 🔎 log tylko na serwerze (zredagowany)
+    console.log('Turnstile verify:', {
+      success: data?.success,
+      hostname: data?.hostname,
+      'error-codes': data?.['error-codes'],
+      action: data?.action,
+      cdata: data?.cdata ? 'present' : 'none',
+    });
+
+    // Zwracamy surowe dane, żeby UI mógł je zmapować
     return { ok: !!data.success, detail: data as any };
   } catch (e) {
+    console.error('Turnstile verify exception:', e);
     return { ok: false as const, reason: 'verify-exception' as const, detail: String(e) };
   }
 }
@@ -47,40 +60,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     username?: string; email?: string; password?: string; turnstileToken?: string;
   };
 
-  // 1) walidacje
   const usernameNorm = (username ?? '').trim();
   const emailNorm = (email ?? '').trim().toLowerCase();
   if (!usernameNorm || !emailNorm || !password) {
     return res.status(400).json({ ok: false, message: 'Brakuje wymaganych danych.' });
   }
 
-  // username: 3-30 znaków, litery/cyfry/kropka/podkreślnik/myślnik
   if (!/^[a-zA-Z0-9._-]{3,30}$/.test(usernameNorm)) {
     return res.status(400).json({ ok: false, message: 'Nazwa użytkownika może zawierać litery, cyfry, ., _, - i mieć 3–30 znaków.' });
   }
-
   if (password.length < 8 || !/[A-Z]/.test(password) || !/[^a-zA-Z0-9]/.test(password)) {
     return res.status(400).json({ ok: false, message: 'Hasło musi mieć min. 8 znaków, 1 wielką literę i 1 znak specjalny.' });
   }
-
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(emailNorm)) {
     return res.status(400).json({ ok: false, message: 'Nieprawidłowy adres e-mail.' });
   }
 
-  // 2) Turnstile
   const ip = (req.headers['cf-connecting-ip'] as string) || req.socket.remoteAddress;
+
+  // 🔎 logujemy skąd przyszedł request (pomaga gdy widget działa na innym hoście)
+  console.log('Register attempt:', {
+    host: req.headers.host,
+    ip,
+  });
+
   const ts = await verifyTurnstile(turnstileToken, ip);
   if (!ts.ok) {
+    // 🔎 przepisujemy najczęstsze kody Turnstile na zrozumiałe info
+    const codes = (ts as any)?.detail?.['error-codes'] || [];
+    let friendly = 'Weryfikacja nie powiodła się. Spróbuj ponownie.';
+    if (codes.includes('invalid-input-response')) friendly = 'Sesja wygasła lub token jest nieprawidłowy. Odśwież weryfikację i spróbuj ponownie.';
+    if (codes.includes('invalid-input-secret')) friendly = 'Nieprawidłowy sekret Turnstile (konfiguracja serwera).';
+    if (codes.includes('invalid-sitekey')) friendly = 'Nieprawidłowy site key Turnstile (konfiguracja klienta).';
+    if (codes.includes('hostname-mismatch')) friendly = 'Domena nie jest dodana w Turnstile → Hostname Management.';
     return res.status(400).json({
       ok: false,
-      message: 'Weryfikacja nie powiodła się. Spróbuj ponownie.',
-      detail: ts.detail ?? ts.reason ?? null,
+      message: friendly,
+      detail: (ts as any).detail ?? (ts as any).reason ?? null,
     });
   }
 
   try {
-    // 3) unikalność
     const [emailExists, usernameExists] = await Promise.all([
       prisma.user.findUnique({ where: { email: emailNorm } }),
       prisma.user.findUnique({ where: { username: usernameNorm } }),
@@ -88,7 +109,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (emailExists)   return res.status(409).json({ ok: false, message: 'Ten e-mail jest już zarejestrowany.' });
     if (usernameExists) return res.status(409).json({ ok: false, message: 'Nazwa użytkownika jest już zajęta.' });
 
-    // 4) zapis
     const passwordHash = await bcrypt.hash(password, 10);
     const token = randomBytes(32).toString('hex');
 
@@ -103,7 +123,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       select: { id: true, username: true, email: true },
     });
 
-    // 5) mail weryfikacyjny
     try {
       await sendVerificationEmail(emailNorm, token);
     } catch (e) {
