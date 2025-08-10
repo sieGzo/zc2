@@ -8,10 +8,7 @@ import { FaTiktok, FaInstagram, FaFacebook, FaYoutube, FaHashtag } from 'react-i
 type VisitStats = { total: number; today: number; month: number; unique: number }
 
 function Pill({
-  label,
-  value,
-  loading,
-  emoji,
+  label, value, loading, emoji,
 }: { label: string; value?: number; loading?: boolean; emoji: string }) {
   const fmt = useMemo(() => new Intl.NumberFormat('pl-PL'), [])
   return (
@@ -49,7 +46,6 @@ export default function Footer() {
   return (
     <footer className="mt-16 border-t bg-gray-50/60 dark:border-gray-800 dark:bg-gray-900/80">
       <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col items-center text-center gap-6">
-        {/* Statystyki – małe „pills”. Dodaj NEXT_PUBLIC_SHOW_VISIT_STATS=false aby ukryć */}
         {SHOW_STATS && (
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Pill label="ogółem"   value={visits?.total}  loading={loading} emoji="🔢" />
@@ -59,7 +55,6 @@ export default function Footer() {
           </div>
         )}
 
-        {/* Sociale – mniejsze, delikatny hover */}
         <div className="flex items-center gap-4 text-xl text-[#f1861e]">
           <Link href="https://www.youtube.com/@zwiedzajchytrze" target="_blank" aria-label="YouTube" className="transition-opacity hover:opacity-80"><FaYoutube /></Link>
           <Link href="https://www.threads.com/@zwiedzajchytrze"   target="_blank" aria-label="Threads" className="transition-opacity hover:opacity-80"><FaHashtag /></Link>
@@ -68,16 +63,18 @@ export default function Footer() {
           <Link href="https://www.facebook.com/profile.php?id=61578581730371" target="_blank" aria-label="Facebook" className="transition-opacity hover:opacity-80"><FaFacebook /></Link>
         </div>
 
-        {/* Copyright z malutkim liskiem */}
-        <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
+        {/* Copyright – lisek PO napisie „Zwiedzaj Chytrze”, malutki i bez obramowania */}
+        <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+          © {new Date().getFullYear()}&nbsp;
+          <span className="font-semibold text-[#f1861e]">Zwiedzaj Chytrze</span>
           <Image
             src="/logo.png"
             alt=""
-            width={16}
-            height={16}
-            className="inline-block rounded-sm ring-1 ring-gray-200 dark:ring-gray-700"
+            width={14}
+            height={14}
+            className="inline-block align-middle translate-y-[1px]"
           />
-          © {new Date().getFullYear()} <span className="font-semibold text-[#f1861e]">Zwiedzaj Chytrze</span>. Wszystkie prawa zastrzeżone.
+          <span className="ml-1">Wszystkie prawa zastrzeżone.</span>
         </p>
       </div>
     </footer>
