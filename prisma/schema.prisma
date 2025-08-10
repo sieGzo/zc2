@@ -42,15 +42,17 @@ model NewsletterSubscriber {
   verified  Boolean  @default(false)
 }
 
+// schema.prisma
 model Visit {
   id        String   @id @default(cuid())
-  ipHash    String   @db.VarChar(64)
+  ipHash    String   @db.VarChar(64)     // teraz WYMAGANE
   userAgent String?  @db.VarChar(120)
   createdAt DateTime @default(now())
 
   @@index([createdAt])
   @@index([ipHash])
 }
+
 
 // wymagane przez NextAuth (dopasowane do adaptera)
 model Account {
