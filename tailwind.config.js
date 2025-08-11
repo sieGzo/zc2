@@ -11,21 +11,12 @@ module.exports = {
   ],
   darkMode: 'class',
   safelist: [
-    // arbitralne wartości, używane w kodzie i/lub wstawiane warunkowo
     { pattern: /z-\[(?:2000|2100|2150)\]/ },
-    // jeżeli będziesz dodawać kolejne arbitralne klasy, możesz rozszerzyć:
-    // { pattern: /z-\[\d+\]/ },
   ],
   theme: {
     extend: {
       fontFamily: {
-        sans: [
-          'Poppins',
-          'Segoe UI Emoji',
-          'Apple Color Emoji',
-          'Noto Color Emoji',
-          'sans-serif',
-        ],
+        sans: ['Poppins', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', 'sans-serif'],
       },
       animation: {
         fadeIn: 'fadeIn 3s ease-in-out forwards',
@@ -56,9 +47,20 @@ module.exports = {
   },
   plugins: [
     require('@tailwindcss/forms'),
-    // wariant "contrast:" => body.contrast &
-    plugin(function ({ addVariant }) {
+    plugin(function ({ addVariant, addComponents }) {
+      // wariant dostępności
       addVariant('contrast', 'body.contrast &')
+
+      // komponent .pill
+      addComponents({
+        '.pill': {
+          '@apply rounded-full px-3 py-1.5 text-[12px] leading-none': {},
+          '@apply flex items-center justify-center gap-1': {},
+          '@apply bg-white/70 border border-gray-200/70': {},
+          '@apply dark:bg-gray-800/60 dark:border-gray-700': {},
+          '@apply contrast:bg-black contrast:border-white contrast:text-white': {},
+        },
+      })
     }),
   ],
 }

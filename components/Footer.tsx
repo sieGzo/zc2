@@ -13,14 +13,15 @@ function Pill({
   const fmt = useMemo(() => new Intl.NumberFormat('pl-PL'), [])
   return (
     <div
-      className="rounded-full px-3 py-1.5 text-[12px] leading-none
-                 bg-white/70 border border-gray-200/70
-                 dark:bg-gray-800/60 dark:border-gray-700
-                 flex items-center justify-center gap-1"
+      className="
+        pill
+        flex items-center justify-center gap-1
+      "
+      aria-live="polite"
     >
       <span aria-hidden className="text-[13px]">{emoji}</span>
       <span className="font-medium">{loading ? '…' : fmt.format(value ?? 0)}</span>
-      <span className="pl-1 text-gray-500 dark:text-gray-400">{label}</span>
+      <span className="pl-1 text-gray-500 dark:text-gray-400 contrast:text-white">{label}</span>
     </div>
   )
 }
@@ -31,20 +32,35 @@ export default function Footer() {
 
   const [visits, setVisits] = useState<VisitStats | null>(null)
 
+  // stabilniejsze pobieranie: no-store + ts param + keepalive + prosty retry
   useEffect(() => {
     if (!SHOW_STATS) return
-    const ac = new AbortController()
-    fetch('/api/auth/counter', { signal: ac.signal, cache: 'no-store' })
-      .then(r => (r.ok ? r.json() : null))
-      .then(d => setVisits(d))
-      .catch(() => {})
-    return () => ac.abort()
+    let aborted = false
+
+    const load = async (attempt = 0) => {
+      try {
+        const r = await fetch(`/api/auth/counter?ts=${Date.now()}`, {
+          cache: 'no-store',
+          keepalive: true,
+        })
+        if (!r.ok) throw new Error('HTTP ' + r.status)
+        const d: VisitStats = await r.json()
+        if (!aborted) setVisits(d)
+      } catch {
+        if (attempt < 2 && !aborted) {
+          setTimeout(() => load(attempt + 1), 600 * (attempt + 1)) // 0.6s, 1.2s
+        }
+      }
+    }
+
+    load()
+    return () => { aborted = true }
   }, [SHOW_STATS])
 
   const loading = SHOW_STATS && !visits
 
   return (
-    <footer className="mt-16 border-t bg-gray-50/60 dark:border-gray-800 dark:bg-gray-900/80">
+    <footer className="mt-16 border-t bg-gray-50/60 dark:border-gray-800 dark:bg-gray-900/80 contrast:bg-black contrast:border-white">
       <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col items-center text-center gap-6">
         {SHOW_STATS && (
           <div className="flex flex-wrap items-center justify-center gap-2">
@@ -59,12 +75,11 @@ export default function Footer() {
           <Link href="https://www.youtube.com/@zwiedzajchytrze" target="_blank" aria-label="YouTube" className="transition-opacity hover:opacity-80"><FaYoutube /></Link>
           <Link href="https://www.threads.com/@zwiedzajchytrze"   target="_blank" aria-label="Threads" className="transition-opacity hover:opacity-80"><FaHashtag /></Link>
           <Link href="https://www.tiktok.com/@zwiedzajchytrze"    target="_blank" aria-label="TikTok"   className="transition-opacity hover:opacity-80"><FaTiktok /></Link>
-          <Link href="https://www.instagram.com/zwiedzajchytrze/" target="_blank" aria-label="Instagram"className="transition-opacity hover:opacity-80"><FaInstagram /></Link>
+          <Link href="https://www.instagram.com/zwiedzajchytrze/" target="_blank" aria-label="Instagram" className="transition-opacity hover:opacity-80"><FaInstagram /></Link>
           <Link href="https://www.facebook.com/profile.php?id=61578581730371" target="_blank" aria-label="Facebook" className="transition-opacity hover:opacity-80"><FaFacebook /></Link>
         </div>
 
-        {/* Copyright – lisek PO napisie „Zwiedzaj Chytrze”, malutki i bez obramowania */}
-        <p className="text-xs text-gray-600 dark:text-gray-400 flex flex-wrap justify-center items-center gap-1">
+        <p className="text-xs text-gray-600 dark:text-gray-400 contrast:text-white flex flex-wrap justify-center items-center gap-1">
           © {new Date().getFullYear()}&nbsp;
           <span className="font-semibold text-[#f1861e] whitespace-nowrap">Zwiedzaj Chytrze</span>
           <Image

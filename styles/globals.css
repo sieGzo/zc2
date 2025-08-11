@@ -254,3 +254,26 @@ body.contrast .dark\:text-gray-400 {
 }
 
 /* linki w HC zostają żółte – już masz to wyżej */
+
+/* === Footer & pille – High Contrast tweaks === */
+body.contrast footer {
+  background: #000 !important;
+  border-color: #fff !important;
+}
+body.contrast footer * {
+  color: #fff !important;
+  border-color: #fff !important;
+}
+
+/* pille */
+body.contrast .pill {
+  background: #000 !important;
+  border-color: #fff !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+/* delikatne ikonki/emoji – nie przygaszaj w HC */
+body.contrast .pill [aria-hidden="true"] {
+  opacity: 1 !important;
+}
