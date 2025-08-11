@@ -2,17 +2,20 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { amadeus } from '@/lib/amadeus'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+type PriceObj = { amount: number; currency: string }
 type Deal = {
   origin: string
   destination: string
   departureDate?: string
   returnDate?: string
-  price: { amount: number; currency: string }
+  price: PriceObj
 }
 
 const DEFAULT_ORIGINS = ['WAW', 'KRK', 'GDN', 'WRO', 'BER', 'BUD']
 
-// awaryjne dane, gdy brak kluczy lub API zwróci pustkę/błąd
 const FALLBACK: Deal[] = [
   { origin: 'WAW', destination: 'BCN', price: { amount: 289, currency: 'PLN' } },
   { origin: 'KRK', destination: 'ROM', price: { amount: 319, currency: 'PLN' } },
@@ -25,21 +28,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ ok: false, message: 'Method Not Allowed' })
   }
 
-  // Force fresh response kiedy user klika "Odśwież"
-  // Działa gdy dodasz ?nocache=1 LUB dowolny parametr _t
-  const noCache = req.query.nocache === '1' || typeof req.query._t !== 'undefined'
+  const noCache =
+    req.query.nocache === '1' ||
+    typeof req.query.t !== 'undefined' ||
+    typeof req.query._t !== 'undefined'
+
   if (noCache) {
     res.setHeader('Cache-Control', 'no-store')
     res.setHeader('Vercel-CDN-Cache-Control', 'no-store')
   } else {
-    // normalnie: 1h w CDN + 10 min SWR
     res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=600')
     res.setHeader('Vercel-CDN-Cache-Control', 's-maxage=3600, stale-while-revalidate=600')
   }
 
   const hasKeys = !!process.env.AMADEUS_CLIENT_ID && !!process.env.AMADEUS_CLIENT_SECRET
   if (!hasKeys) {
-    return res.status(200).json(FALLBACK)
+    res.setHeader('x-source', 'fallback')
+    return res.status(200).json({
+      notice: '⚠️ Dane tymczasowe – brak kluczy API Amadeus lub API jest niedostępne.',
+      flights: FALLBACK,
+    })
   }
 
   const origins =
@@ -66,7 +74,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!Array.isArray(data)) continue
 
         for (const d of data) {
-          // w API Amadeus „price” bywa stringiem albo obiektem z „total”
           const rawPrice =
             typeof d?.price === 'object' ? d?.price?.total : d?.price
           const amount = Number(rawPrice)
@@ -81,12 +88,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           })
         }
       } catch (e) {
-        // pojedynczy origin nie blokuje całej listy
         console.warn(`Amadeus: błąd dla origin=${origin}`, (e as any)?.message || e)
       }
     }
 
-    // dedupe po destination (bierzemy najtańszą zduplikowaną destynację)
     const byDest = new Map<string, Deal>()
     for (const deal of all) {
       const existing = byDest.get(deal.destination)
@@ -94,24 +99,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         byDest.set(deal.destination, deal)
       }
     }
-    const deduped = Array.from(byDest.values())
 
-    // sortuj po cenie
+    const deduped = Array.from(byDest.values())
     deduped.sort((a, b) => a.price.amount - b.price.amount)
 
-    // żeby "odśwież" dawało różnorodność: bierzemy najtańsze ~50, tasujemy i tniemy do limitu
     const cheapestBucket = deduped.slice(0, 50)
     for (let i = cheapestBucket.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[cheapestBucket[i], cheapestBucket[j]] = [cheapestBucket[j], cheapestBucket[i]]
     }
+
     const top = cheapestBucket.slice(0, limit)
 
-    if (!top.length) return res.status(200).json(FALLBACK)
+    if (!top.length) {
+      res.setHeader('x-source', 'fallback')
+      return res.status(200).json({
+        notice: '⚠️ API Amadeus nie zwróciło wyników – pokazujemy dane przykładowe.',
+        flights: FALLBACK,
+      })
+    }
 
-    return res.status(200).json(top)
+    res.setHeader('x-source', 'amadeus')
+    return res.status(200).json({ flights: top })
   } catch (err) {
     console.warn('Amadeus API error (flights):', (err as any)?.response?.data || (err as any)?.message || err)
-    return res.status(200).json(FALLBACK)
+    res.setHeader('x-source', 'fallback')
+    return res.status(200).json({
+      notice: '⚠️ Wystąpił błąd API Amadeus – pokazujemy dane przykładowe.',
+      flights: FALLBACK,
+    })
   }
 }

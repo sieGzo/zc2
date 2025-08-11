@@ -15,7 +15,7 @@ export default function PromocjeLinii() {
   const [flights, setFlights] = useState<Deal[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [source, setSource] = useState<string | null>(null) // amadeus | fallback:...
+  const [source, setSource] = useState<string | null>(null)
   const listRef = useRef<HTMLUListElement>(null)
   const fmt = useMemo(() => new Intl.NumberFormat('pl-PL'), [])
 
@@ -66,7 +66,7 @@ export default function PromocjeLinii() {
 
       <button
         type="button"
-        onClick={(e) => { e.preventDefault(); fetchFlights({ nocache: true }) }}
+        onClick={() => fetchFlights({ nocache: true })}
         className="mb-6 inline-flex items-center justify-center bg-[#f1861e] text-white px-5 py-2 rounded-full font-semibold hover:bg-orange-600 transition-colors"
         tabIndex={-1}
       >
