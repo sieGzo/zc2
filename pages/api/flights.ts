@@ -23,6 +23,9 @@ const FALLBACK: Deal[] = [
   { origin: 'WRO', destination: 'PAR', price: { amount: 339, currency: 'PLN' } },
 ]
 
+// odczyt środowiska API
+const env = (process.env.AMADEUS_ENV || 'prod').toLowerCase()
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ ok: false, message: 'Method Not Allowed' })
@@ -42,12 +45,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const hasKeys = !!process.env.AMADEUS_CLIENT_ID && !!process.env.AMADEUS_CLIENT_SECRET
-
-  // ⬇️ check:
-res.setHeader('x-amadeus-keys', hasKeys ? 'yes' : 'no')
-
   if (!hasKeys) {
-    res.setHeader('x-source', 'fallback')
+    res.setHeader('x-source', `fallback-${env}`)
     return res.status(200).json({
       notice: '⚠️ Dane tymczasowe – brak kluczy API Amadeus lub API jest niedostępne.',
       flights: FALLBACK,
@@ -116,18 +115,18 @@ res.setHeader('x-amadeus-keys', hasKeys ? 'yes' : 'no')
     const top = cheapestBucket.slice(0, limit)
 
     if (!top.length) {
-      res.setHeader('x-source', 'fallback')
+      res.setHeader('x-source', `fallback-${env}`)
       return res.status(200).json({
         notice: '⚠️ API Amadeus nie zwróciło wyników – pokazujemy dane przykładowe.',
         flights: FALLBACK,
       })
     }
 
-    res.setHeader('x-source', 'amadeus')
+    res.setHeader('x-source', `amadeus-${env}`)
     return res.status(200).json({ flights: top })
   } catch (err) {
     console.warn('Amadeus API error (flights):', (err as any)?.response?.data || (err as any)?.message || err)
-    res.setHeader('x-source', 'fallback')
+    res.setHeader('x-source', `fallback-${env}`)
     return res.status(200).json({
       notice: '⚠️ Wystąpił błąd API Amadeus – pokazujemy dane przykładowe.',
       flights: FALLBACK,
