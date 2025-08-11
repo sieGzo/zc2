@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { MdOutlineContrast } from 'react-icons/md'
 import { BsTextParagraph, BsTypeBold, BsLink45Deg } from 'react-icons/bs'
 import { PiTextAa, PiTextColumnsBold } from 'react-icons/pi'
@@ -19,30 +19,42 @@ const OPTIONS: Opt[] = [
 
 export default function AccessPanel() {
   const [open, setOpen] = useState(false)
+  const [active, setActive] = useState<Set<string>>(new Set())
   const panelRef = useRef<HTMLDivElement | null>(null)
 
-  // zapamiętywanie ustawień (opcjonalnie)
+  // wczytaj zapisane ustawienia
   useEffect(() => {
     const saved = localStorage.getItem('a11y-classes')
-    if (saved) {
-      const list = JSON.parse(saved) as string[]
-      list.forEach(c => document.body.classList.add(c))
-    }
+    const list: string[] = saved ? JSON.parse(saved) : []
+    const set = new Set(list)
+    setActive(set)
+    // zsynchronizuj z body
+    list.forEach(c => document.body.classList.add(c))
   }, [])
 
-  const persist = () => {
-    const list = Array.from(document.body.classList).filter(c =>
-      OPTIONS.some(o => o.cls === c)
-    )
-    localStorage.setItem('a11y-classes', JSON.stringify(list))
+  const persist = (set: Set<string>) => {
+    localStorage.setItem('a11y-classes', JSON.stringify(Array.from(set)))
   }
 
   const toggleClass = (cls: string) => {
-    document.body.classList.toggle(cls)
-    persist()
+    const next = new Set(active)
+    if (next.has(cls)) {
+      next.delete(cls)
+      document.body.classList.remove(cls)
+    } else {
+      next.add(cls)
+      document.body.classList.add(cls)
+      // kontrast nie miesza się z dark
+      if (cls === 'contrast') {
+        document.body.classList.remove('dark')
+        next.delete('dark') // na wypadek gdyby kiedyś była zapisywana
+      }
+    }
+    setActive(next)
+    persist(next)
   }
 
-  // zamykanie po kliknięciu poza i ESC
+  // zamykanie po kliknięciu poza i ESC + ustaw fokus po otwarciu
   useEffect(() => {
     if (!open) return
     const onClick = (e: MouseEvent) => {
@@ -54,14 +66,22 @@ export default function AccessPanel() {
     }
     document.addEventListener('mousedown', onClick)
     document.addEventListener('keydown', onKey)
+
+    // focus pierwszy przycisk po otwarciu
+    const firstBtn = panelRef.current?.querySelector('button[role="menuitemcheckbox"]') as HTMLButtonElement | null
+    firstBtn?.focus()
+
     return () => {
       document.removeEventListener('mousedown', onClick)
       document.removeEventListener('keydown', onKey)
     }
   }, [open])
 
+  // ułatwka do sprawdzania czy dana klasa aktywna
+  const isOn = useMemo(() => (cls: string) => active.has(cls), [active])
+
   return (
-    <div className="relative z-[95]">
+    <div className="relative z-[2100]">
       <button
         onClick={() => setOpen(v => !v)}
         className="text-[#f1861e] text-2xl hover:scale-110 transition"
@@ -76,6 +96,7 @@ export default function AccessPanel() {
         <div
           ref={panelRef}
           role="menu"
+          aria-label="Panel dostępności"
           className="
             absolute
             left-1/2 -translate-x-1/2
@@ -85,14 +106,14 @@ export default function AccessPanel() {
             bg-white dark:bg-gray-800 backdrop-blur-md
             text-sm text-gray-800 dark:text-gray-100
             p-4 space-y-2 border border-gray-300 dark:border-gray-700
-            z-[100]
+            z-[2150]
           "
         >
           {OPTIONS.map(({ icon, label, cls }) => (
             <button
               key={cls}
               role="menuitemcheckbox"
-              aria-checked={document.body.classList.contains(cls)}
+              aria-checked={isOn(cls)}
               onClick={() => toggleClass(cls)}
               className="
                 flex items-center gap-2
@@ -110,8 +131,11 @@ export default function AccessPanel() {
 
           <button
             onClick={() => {
+              // usuń wszystkie a11y klasy
+              const next = new Set<string>()
               OPTIONS.forEach(o => document.body.classList.remove(o.cls))
-              persist()
+              setActive(next)
+              persist(next)
               setOpen(false)
             }}
             className="w-full text-left py-2 font-semibold text-[#f1861e] hover:underline"

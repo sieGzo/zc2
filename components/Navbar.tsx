@@ -37,7 +37,6 @@ export default function Navbar() {
       <Link href="/blog" prefetch={false} className="hover:text-[#f1861e]" onClick={onClick}>Blog</Link>
       <Link href="/o-mnie" prefetch={false} className="hover:text-[#f1861e]" onClick={onClick}>O mnie</Link>
       <Link href="/kontakt" prefetch={false} className="hover:text-[#f1861e]" onClick={onClick}>Kontakt</Link>
-      {/* ⬇️ tu zmiana */}
       <Link href="/szlaki" prefetch={false} className="hover:text-[#f1861e]" onClick={onClick}>Szlaki</Link>
     </>
   )
@@ -72,7 +71,7 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur border-b border-gray-200 dark:border-gray-800">
+    <nav className="sticky top-0 z-[2000] bg-white/80 dark:bg-gray-900/80 backdrop-blur border-b border-gray-200 dark:border-gray-800">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
         <Link href="/" prefetch={false} className="flex items-center gap-3">
           <Image src="/logo.png" alt="Zwiedzaj Chytrze" width={40} height={40} />

@@ -197,3 +197,66 @@ ul[role="listbox"] > li:hover,
   /* Drobiazgi */
   .kicker { @apply text-[11px] tracking-wider font-semibold text-[#f1861e]; }
 }
+
+/* =========================
+   HIGH CONTRAST OVERRIDES
+   ========================= */
+
+body.contrast {
+  /* tło/tekst globalnie */
+  background: #000 !important;
+  color: #fff !important;
+}
+
+/* Linki widoczne */
+body.contrast a { color: #ffeb3b !important; }
+
+/* Najczęstsze komponenty UI */
+body.contrast .card,
+body.contrast .autocomplete-panel,
+body.contrast ul[role="listbox"],
+body.contrast .leaflet-container,
+body.contrast .leaflet-control {
+  background: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
+
+/* Przycisk – warianty w kontrastowym */
+body.contrast .btn,
+body.contrast .btn-md,
+body.contrast .btn-sm {
+  background: #000 !important;
+  color: #ffeb3b !important;
+  border-color: #ffeb3b !important;
+}
+
+body.contrast .btn-primary {
+  background: #ffeb3b !important;
+  color: #000 !important;
+  border-color: #ffeb3b !important;
+}
+
+body.contrast .btn-outline {
+  background: transparent !important;
+  color: #ffeb3b !important;
+  border-color: #ffeb3b !important;
+}
+
+body.contrast .btn-ghost {
+  background: transparent !important;
+  color: #ffeb3b !important;
+}
+
+/* Formularze – czytelne, ale nie „odwracają” się */
+body.contrast input,
+body.contrast select,
+body.contrast textarea,
+body.contrast button {
+  background: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
+
+/* Krawędzie/ikony */
+body.contrast svg { fill: currentColor !important; stroke: currentColor !important; }
