@@ -15,14 +15,12 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const toggleMenu = () => setIsOpen(v => !v)
 
-  // Zamknij mobilne menu przy zmianie strony
   useEffect(() => {
     const handleRoute = () => setIsOpen(false)
     router.events.on('routeChangeStart', handleRoute)
     return () => router.events.off('routeChangeStart', handleRoute)
   }, [router.events])
 
-  // Zamknij mobilne menu gdy szerokość wskoczy na >= 1280px (xl)
   useEffect(() => {
     const onResize = () => {
       if (typeof window !== 'undefined' && window.innerWidth >= 1280) setIsOpen(false)
@@ -71,14 +69,13 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="sticky top-0 z-[2000] bg-white/80 dark:bg-gray-900/80 backdrop-blur border-b border-gray-200 dark:border-gray-800">
+    <nav className="fixed top-0 left-0 w-full z-[2000] bg-white/80 dark:bg-gray-900/80 backdrop-blur border-b border-gray-200 dark:border-gray-800">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
         <Link href="/" prefetch={false} className="flex items-center gap-3">
           <Image src="/logo.png" alt="Zwiedzaj Chytrze" width={40} height={40} />
           <span className="font-bold text-lg">Zwiedzaj Chytrze</span>
         </Link>
 
-        {/* Desktop/Tablet: pełne menu od XL (≥1280px) */}
         <div className="hidden xl:flex items-center gap-5">
           <div className="flex items-center gap-5">
             <NavLinks />
@@ -90,7 +87,6 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile/Tablet (<1280px): hamburger */}
         <button
           className="xl:hidden p-2"
           onClick={toggleMenu}
@@ -102,7 +98,6 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* Mobile menu */}
       {isOpen && (
         <div id="mobile-nav" className="xl:hidden px-4 pb-4 border-t border-gray-200 dark:border-gray-800">
           <div className="flex flex-col items-center gap-3 py-3">

@@ -24,8 +24,11 @@ export default function MyApp({ Component, pageProps }: AppProps) {
       <ToasterProvider>
         <SessionSync />
         <Navbar />
-        <Component {...pageProps} />
-        <Footer />
+          <div className="pt-[72px]">
+            <Component {...pageProps} />
+          </div>
+          <Footer />
+
         {/* ⬇️ Wstaw na końcu aplikacji */}
         <Analytics />
         <SpeedInsights />
