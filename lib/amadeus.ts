@@ -1,13 +1,12 @@
 // lib/amadeus.ts
 import Amadeus from 'amadeus'
 
-const clientId = process.env.AMADEUS_CLIENT_ID
-const clientSecret = process.env.AMADEUS_CLIENT_SECRET
+// Ustaw w Vercelu np. AMADEUS_ENV=test dla sandboxa (lub prod dla produkcji)
+const env = (process.env.AMADEUS_ENV || 'prod').toLowerCase()
+const hostname = env === 'test' ? 'test.api.amadeus.com' : 'api.amadeus.com'
 
-// Użyj produkcyjnego hosta; dla sandboxa: 'test' lub hostname: 'test.api.amadeus.com'
 export const amadeus = new Amadeus({
-  clientId,
-  clientSecret,
-  // jeśli masz klucze do sandboxa, odkomentuj to:
-//  hostname: 'test.api.amadeus.com',
+  clientId: process.env.AMADEUS_CLIENT_ID,
+  clientSecret: process.env.AMADEUS_CLIENT_SECRET,
+  hostname, // 👈 kluczowe
 })

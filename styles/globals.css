@@ -277,3 +277,18 @@ body.contrast .pill {
 body.contrast .pill [aria-hidden="true"] {
   opacity: 1 !important;
 }
+
+/* HERO – kontrast */
+body.contrast .hero-title {
+  color: #ffeb3b !important;      /* żółty tytuł */
+  background: none !important;     /* wyłącz gradient */
+  -webkit-text-fill-color: currentColor !important;
+  text-shadow: none !important;
+}
+body.contrast .hero-title .text-zinc-400 {
+  color: #fff !important;          /* biały dla drugiej części */
+}
+body.contrast .hero-subtitle {
+  color: #fff !important;          /* czytelny biały */
+  opacity: 1 !important;
+}
