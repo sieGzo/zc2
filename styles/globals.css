@@ -32,7 +32,7 @@
     box-sizing: border-box;
   }
 
-  /* 🌙 Minimum dla elementów formularzy w dark */
+  /* 🌙 minimum dla elementów formularzy w dark */
   .dark input,
   .dark select,
   .dark textarea {
@@ -45,55 +45,8 @@
     color: #f9fafb;            /* gray-50 */
   }
 
-  /* Tryby dostępności (global) */
-  body.contrast { background-color: #000 !important; color: #fff !important; }
-  body.contrast a { color: #fff !important; }
-
-  body.contrast header,
-  body.contrast nav,
-  body.contrast footer,
-  body.contrast main,
-  body.contrast section,
-  body.contrast article {
-    background-color: #000 !important;
-    color: #fff !important;
-    border-color: #fff !important;
-  }
-
-  body.contrast img,
-  body.contrast video,
-  body.contrast picture,
-  body.contrast svg,
-  body.contrast canvas { filter: none !important; }
-
-  body.contrast button,
-  body.contrast input,
-  body.contrast select,
-  body.contrast textarea {
-    background-color: #222 !important;
-    color: #fff !important;
-    border-color: #fff !important;
-  }
-
-  /* Animacje */
-  @keyframes swing {
-    0% { transform: rotate(0deg); }
-    25% { transform: rotate(10deg); }
-    50% { transform: rotate(0deg); }
-    75% { transform: rotate(-10deg); }
-    100% { transform: rotate(0deg); }
-  }
-  .animate-swing { animation: swing 1.5s ease-in-out infinite; }
-
-  @keyframes fadeIn1 { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes fadeIn2 { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-20px); } }
-  .animate-fadeIn1 { animation: fadeIn1 3s ease-out forwards; }
-  .animate-fadeIn2 { animation: fadeIn2 4s ease-out forwards; }
-  .animate-fadeOut { animation: fadeOut 5s ease-in forwards; }
-
   /* A11y toggles */
-  body.large-font { font-size: 22px; }
+  body.large-font  { font-size: 22px; }
   body.letter-spacing { letter-spacing: 0.075em; }
   body.font-alt { font-family: 'Arial Rounded MT Bold', 'Segoe UI', sans-serif !important; }
   body.line-spacing { line-height: 1.8 !important; }
@@ -108,7 +61,7 @@
    COMPONENTS
    ========================= */
 @layer components {
-  /* Formularze: wymuś czytelność */
+  /* Formularze: czytelność */
   .form-contrast {
     @apply bg-white text-gray-900 placeholder-gray-600 border-gray-300
            dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-400 dark:border-gray-600
@@ -155,6 +108,14 @@
   .card-hover { @apply hover:shadow-md transition; }
   .card-body { @apply p-4 md:p-6; }
 
+  /* Pigułka (footer counter) */
+  .pill {
+    @apply rounded-full px-3 py-1.5 text-[12px] leading-none
+           bg-white/70 border border-gray-200/70
+           dark:bg-gray-800/60 dark:border-gray-700
+           flex items-center justify-center gap-1;
+  }
+
   /* Drobiazgi */
   .kicker { @apply text-[11px] tracking-wider font-semibold text-[#f1861e]; }
 }
@@ -163,80 +124,35 @@
    UTILITIES
    ========================= */
 @layer utilities {
-  /* Nic szczególnego tu nie musi być – ale zostawiam warstwę dla przyszłych utility */
+  /* zostawione na przyszłość */
 }
 
 /* =========================
-   HIGH CONTRAST OVERRIDES
+   HIGH CONTRAST (HC)
    ========================= */
 
-body.contrast .card,
-body.contrast .autocomplete-panel,
-body.contrast ul[role="listbox"],
-body.contrast .leaflet-container,
-body.contrast .leaflet-control {
-  background: #000 !important;
-  color: #fff !important;
-  border-color: #fff !important;
-}
+body.contrast { background-color: #000 !important; color: #fff !important; }
+body.contrast a { color: #fff !important; }
 
-body.contrast .btn,
-body.contrast .btn-md,
-body.contrast .btn-sm {
-  background: #000 !important;
-  color: #ffeb3b !important;
-  border-color: #ffeb3b !important;
-}
-
-body.contrast .btn-primary {
-  background: #ffeb3b !important;
-  color: #000 !important;
-  border-color: #ffeb3b !important;
-}
-
-body.contrast .btn-outline {
-  background: transparent !important;
-  color: #ffeb3b !important;
-  border-color: #ffeb3b !important;
-}
-
-body.contrast .btn-ghost {
-  background: transparent !important;
-  color: #ffeb3b !important;
-}
-
-body.contrast input,
-body.contrast select,
-body.contrast textarea,
-body.contrast button {
-  background: #000 !important;
-  color: #fff !important;
-  border-color: #fff !important;
-}
-
-body.contrast svg { fill: currentColor !important; stroke: currentColor !important; }
-
-
-/* === Contrast: neutralizuj jasne utility-klasy Tailwinda === */
-
-/* najczęstsze białe tła/lekki szary */
+/* najczęstsze jasne tła */
 body.contrast .bg-white,
 body.contrast .bg-white\/80,
 body.contrast .bg-gray-50,
 body.contrast .bg-gray-100,
-body.contrast .dark\:bg-gray-800 { 
+body.contrast .bg-gray-800,
+body.contrast .bg-gray-900 {
   background: #000 !important;
   color: #fff !important;
 }
 
-/* cienkie obramowania z Tailwinda -> białe */
+/* cienkie obramowania -> białe */
 body.contrast .border-gray-200,
 body.contrast .border-gray-300,
-body.contrast .dark\:border-gray-700 { 
+body.contrast .border-gray-700 {
   border-color: #fff !important;
 }
 
-/* blur i półprzezroczystości są nieczytelne w HC */
+/* blur i półprzezroczystości */
 body.contrast .backdrop-blur,
 body.contrast .backdrop-blur-md,
 body.contrast [class*="backdrop-blur"] {
@@ -249,46 +165,87 @@ body.contrast [class*="backdrop-blur"] {
 body.contrast .text-gray-400,
 body.contrast .text-gray-500,
 body.contrast .text-gray-600,
-body.contrast .dark\:text-gray-400 { 
+body.contrast .text-gray-700,
+body.contrast .dark\:text-gray-400 {
   color: #fff !important;
 }
 
-/* linki w HC zostają żółte – już masz to wyżej */
+/* wyraźny focus w HC */
+body.contrast :focus-visible {
+  outline: 3px solid #ffeb3b !important;
+  outline-offset: 2px;
+}
 
-/* === Footer & pille – High Contrast tweaks === */
-body.contrast footer {
+/* kontenery */
+body.contrast header,
+body.contrast nav,
+body.contrast footer,
+body.contrast main,
+body.contrast section,
+body.contrast article {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
+
+body.contrast img,
+body.contrast video,
+body.contrast picture,
+body.contrast svg,
+body.contrast canvas { filter: none !important; }
+
+body.contrast button,
+body.contrast input,
+body.contrast select,
+body.contrast textarea {
+  background-color: #222 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
+
+/* Buttons w HC */
+body.contrast .btn,
+body.contrast .btn-md,
+body.contrast .btn-sm {
   background: #000 !important;
-  border-color: #fff !important;
+  color: #ffeb3b !important;
+  border-color: #ffeb3b !important;
 }
-body.contrast footer * {
-  color: #fff !important;
-  border-color: #fff !important;
+body.contrast .btn-primary {
+  background: #ffeb3b !important;
+  color: #000 !important;
+  border-color: #ffeb3b !important;
+}
+body.contrast .btn-outline {
+  background: transparent !important;
+  color: #ffeb3b !important;
+  border-color: #ffeb3b !important;
+}
+body.contrast .btn-ghost {
+  background: transparent !important;
+  color: #ffeb3b !important;
 }
 
-/* pille */
+/* Footer & pille */
+body.contrast footer { background: #000 !important; border-color: #fff !important; }
+body.contrast footer * { color: #fff !important; border-color: #fff !important; }
 body.contrast .pill {
   background: #000 !important;
   border-color: #fff !important;
   color: #fff !important;
   box-shadow: none !important;
 }
+body.contrast .pill [aria-hidden="true"] { opacity: 1 !important; }
 
-/* delikatne ikonki/emoji – nie przygaszaj w HC */
-body.contrast .pill [aria-hidden="true"] {
-  opacity: 1 !important;
-}
-
-/* HERO – kontrast */
+/* HERO (kontrast) */
 body.contrast .hero-title {
-  color: #ffeb3b !important;      /* żółty tytuł */
-  background: none !important;     /* wyłącz gradient */
+  color: #ffeb3b !important;
+  background: none !important;
   -webkit-text-fill-color: currentColor !important;
   text-shadow: none !important;
 }
-body.contrast .hero-title .text-zinc-400 {
-  color: #fff !important;          /* biały dla drugiej części */
-}
-body.contrast .hero-subtitle {
-  color: #fff !important;          /* czytelny biały */
-  opacity: 1 !important;
-}
+body.contrast .hero-title .text-zinc-400 { color: #fff !important; }
+body.contrast .hero-subtitle { color: #fff !important; opacity: 1 !important; }
+
+/* Ikony SVG – dopasuj do koloru tekstu */
+body.contrast svg { fill: currentColor !important; stroke: currentColor !important; }
