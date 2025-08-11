@@ -1,7 +1,6 @@
 import Head from 'next/head'
 import ScrollToTop from '@/components/ScrollToTop'
 import IntroVideo from '@/components/IntroVideo'
-import DestinationCarousel from '@/components/DestinationCarousel'
 import PromocjeLinii from '@/components/PromocjeLinii'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -42,17 +41,17 @@ export default function Home() {
 
           <div className="relative max-w-6xl mx-auto text-center">
             <p className="inline-flex items-center gap-2 text-[30px] uppercase tracking-wider text-[#f1861e]">
-              🦊 Zwiedzaj mądrze… Zwiedzaj chytrze 😉
+              🦊 Zwiedzaj&nbsp;mądrze… Zwiedzaj&nbsp;chytrze 😉
             </p>
 
             <h1 className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight">
-              <span className="text-[#f1861e]">Planer tras</span>
-              <span className="text-gray-900 dark:text-white"> + blog podróżniczy</span>
+              <span className="text-[#f1861e]">Planer&nbsp;tras</span>
+              <span className="text-gray-900 dark:text-white"> + blog&nbsp;podróżniczy</span>
             </h1>
 
             <p className="mt-4 text-lg md:text-xl text-gray-700 dark:text-gray-300">
-              Zaplanuj pieszo lub rowerem, zapisz trasę i wróć do niej później.
-              A gdy szukasz pomysłów — wpadnij na bloga po świeże inspiracje.
+              Zaplanuj pieszo lub rowerem, zapisz trasę&nbsp;i wróć do niej później.
+              A&nbsp;gdy szukasz pomysłów — wpadnij na bloga po świeże inspiracje.
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -84,12 +83,12 @@ export default function Home() {
 
         {/* Szlaki */}
         <section className="max-w-6xl mx-auto px-4 my-14 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-6">🗺️ Szlaki i trasy</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-6">🗺️ Szlaki&nbsp;i&nbsp;trasy</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 justify-items-center">
             {[
               { icon: '🚶‍♀️', title: 'Szlaki piesze', text: 'Od krótkich spacerów po dłuższe wędrówki.' },
-              { icon: '⛰️', title: 'Górskie', text: 'Trasy bezpieczne i piękne, z mapą i podpowiedziami.' },
-              { icon: '🚴', title: 'Rowerowe', text: 'Rowerowe przygody w Polsce i Europie, z GPX.' },
+              { icon: '⛰️', title: 'Górskie', text: 'Trasy bezpieczne i&nbsp;piękne, z&nbsp;mapą i&nbsp;podpowiedziami.' },
+              { icon: '🚴', title: 'Rowerowe', text: 'Rowerowe przygody w&nbsp;Polsce i&nbsp;Europie, z&nbsp;GPX.' },
             ].map((c) => (
               <Link
                 key={c.title}
@@ -97,8 +96,11 @@ export default function Home() {
                 className="rounded-lg shadow-sm border border-gray-200/70 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 hover:shadow-md transition w-full max-w-sm"
               >
                 <div className="text-2xl">{c.icon}</div>
-                <h3 className="mt-2 text-lg font-semibold">{c.title}</h3>
-                <p className="mt-1 text-gray-600 dark:text-gray-300">{c.text}</p>
+                <h3 className="mt-2 text-lg font-semibold" dangerouslySetInnerHTML={{ __html: c.title }} />
+                <p
+                  className="mt-1 text-gray-600 dark:text-gray-300"
+                  dangerouslySetInnerHTML={{ __html: c.text }}
+                />
                 <span className="mt-4 inline-block text-[#f1861e] font-medium">Otwórz planer →</span>
               </Link>
             ))}
@@ -108,12 +110,12 @@ export default function Home() {
         {/* Blog */}
         <section className="bg-orange-50 dark:bg-gray-800 py-14">
           <div className="max-w-6xl mx-auto px-4 text-center">
-            <h2 className="text-2xl md:text-3xl font-bold mb-6">📝 Z bloga</h2>
+            <h2 className="text-2xl md:text-3xl font-bold mb-6">📝 Z&nbsp;bloga</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 justify-items-center">
               {[
                 { tag: 'NORWEGIA', title: 'Lofoty bez tłumów', href: '/blog', img: '/lofoten.webp' },
                 { tag: 'USA', title: 'Roadtrip przez parki', href: '/blog', img: '/usa.webp' },
-                { tag: 'ISLANDIA', title: 'Zorza, wodospady i mgła', href: '/blog', img: '/iceland.webp' },
+                { tag: 'ISLANDIA', title: 'Zorza, wodospady i&nbsp;mgła', href: '/blog', img: '/iceland.webp' },
               ].map((p) => (
                 <Link
                   key={p.title}
@@ -123,7 +125,7 @@ export default function Home() {
                   <div className="h-40 relative">
                     <Image
                       src={p.img}
-                      alt={p.title}
+                      alt={p.title.replace(/&nbsp;/g, ' ')}
                       fill
                       className="object-cover"
                       sizes="(max-width: 768px) 100vw, 33vw"
@@ -131,7 +133,10 @@ export default function Home() {
                   </div>
                   <div className="p-4 text-left">
                     <span className="text-[11px] tracking-wider font-semibold text-[#f1861e]">{p.tag}</span>
-                    <h3 className="mt-2 font-semibold">{p.title}</h3>
+                    <h3
+                      className="mt-2 font-semibold"
+                      dangerouslySetInnerHTML={{ __html: p.title }}
+                    />
                     <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Czytaj dalej →</p>
                   </div>
                 </Link>
@@ -148,7 +153,7 @@ export default function Home() {
 
         {/* Promocje */}
         <section className="max-w-6xl mx-auto px-4 my-14 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-6">✈️ Promocje linii lotniczych</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-6">✈️ Promocje&nbsp;linii&nbsp;lotniczych</h2>
           <PromocjeLinii />
         </section>
 
