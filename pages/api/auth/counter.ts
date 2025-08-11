@@ -22,7 +22,6 @@ function ipHmac(ip: string) {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // licznik nie może być cachowany
     res.setHeader('Cache-Control', 'no-store')
     res.setHeader('Vercel-CDN-Cache-Control', 'no-store')
 
@@ -30,18 +29,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const ipHash = ip ? ipHmac(ip) : 'unknown'
     const ua = String(req.headers['user-agent'] || '').slice(0, 200)
 
-    // miękki insert (ignoruj brak tabeli)
     try {
       await prisma.visit.create({ data: { ipHash, userAgent: ua } })
     } catch (e: any) {
-      // P2021: table not found (np. przed migracją) – nie wywalaj API
       if (e?.code !== 'P2021') throw e
     }
 
     const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0)
     const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0)
 
-    // helper: jeśli brak tabeli, zwróć 0 zamiast błędu
     const safe = <T,>(p: Promise<T>) =>
       p.catch((e: any) => (e?.code === 'P2021' ? (0 as unknown as T) : Promise.reject(e)))
 
@@ -51,20 +47,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       safe(prisma.visit.count({ where: { createdAt: { gte: startOfMonth } } })),
     ])
 
-    // kompatybilne liczenie unikalnych: distinct w findMany + length
-    const unique = await (async () => {
-      try {
-        const rows = await prisma.visit.findMany({
-          select: { ipHash: true },
-          distinct: ['ipHash'],
-        })
-        return rows.length
-      } catch (e: any) {
-        // jeśli nawet tutaj brak tabeli
-        if (e?.code === 'P2021') return 0
-        throw e
-      }
-    })()
+    // Unikalne IP – raw query, szybsze i zgodne typowo
+    let unique = 0
+    try {
+      const result = await prisma.$queryRaw<{ cnt: bigint }[]>`
+        SELECT COUNT(DISTINCT "ipHash") AS cnt FROM "Visit"
+      `
+      unique = Number(result[0]?.cnt ?? 0)
+    } catch (e: any) {
+      if (e?.code !== 'P2021') throw e
+    }
 
     res.status(200).json({ total, today, month, unique })
   } catch (err) {
