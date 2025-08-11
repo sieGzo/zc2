@@ -47,7 +47,7 @@
 
   /* Tryby dostępności (global) */
   body.contrast { background-color: #000 !important; color: #fff !important; }
-  body.contrast a { color: #f1861e !important; }
+  body.contrast a { color: #fff !important; }
 
   body.contrast header,
   body.contrast nav,
