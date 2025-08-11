@@ -4,6 +4,7 @@ import IntroVideo from '@/components/IntroVideo'
 import DestinationCarousel from '@/components/DestinationCarousel'
 import PromocjeLinii from '@/components/PromocjeLinii'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function Home() {
   const title = 'Zwiedzaj Chytrze — szlaki i blog podróżniczy'
@@ -41,7 +42,7 @@ export default function Home() {
 
           <div className="relative max-w-6xl mx-auto text-center">
             <p className="inline-flex items-center gap-2 text-[30px] uppercase tracking-wider text-[#f1861e]">
-              🦊 Zwiedzaj mądrze. Zwiedzaj chytrze.
+              🦊 Zwiedzaj mądrze… Zwiedzaj chytrze 😉
             </p>
 
             <h1 className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight">
@@ -75,10 +76,6 @@ export default function Home() {
                 📖 Przejdź do bloga
               </Link>
             </div>
-
-            <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">
-              Bez logowania zaplanujesz trasę; zapis wymaga konta (sekundy).
-            </div>
           </div>
         </section>
 
@@ -86,9 +83,9 @@ export default function Home() {
         <IntroVideo />
 
         {/* Szlaki */}
-        <section className="max-w-6xl mx-auto px-4 my-14">
-          <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center">🗺️ Szlaki i trasy</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <section className="max-w-6xl mx-auto px-4 my-14 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold mb-6">🗺️ Szlaki i trasy</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 justify-items-center">
             {[
               { icon: '🚶‍♀️', title: 'Szlaki piesze', text: 'Od krótkich spacerów po dłuższe wędrówki.' },
               { icon: '⛰️', title: 'Górskie', text: 'Trasy bezpieczne i piękne, z mapą i podpowiedziami.' },
@@ -97,7 +94,7 @@ export default function Home() {
               <Link
                 key={c.title}
                 href="/trails"
-                className="rounded-lg shadow-sm border border-gray-200/70 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 hover:shadow-md transition"
+                className="rounded-lg shadow-sm border border-gray-200/70 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 hover:shadow-md transition w-full max-w-sm"
               >
                 <div className="text-2xl">{c.icon}</div>
                 <h3 className="mt-2 text-lg font-semibold">{c.title}</h3>
@@ -108,23 +105,31 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Blog na tle z destynacji */}
+        {/* Blog */}
         <section className="bg-orange-50 dark:bg-gray-800 py-14">
-          <div className="max-w-6xl mx-auto px-4">
-            <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center">📝 Z bloga</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="max-w-6xl mx-auto px-4 text-center">
+            <h2 className="text-2xl md:text-3xl font-bold mb-6">📝 Z bloga</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 justify-items-center">
               {[
-                { tag: 'NORWEGIA', title: 'Lofoty bez tłumów', href: '/blog' },
-                { tag: 'USA', title: 'Roadtrip przez parki', href: '/blog' },
-                { tag: 'ISLANDIA', title: 'Zorza, wodospady i mgła', href: '/blog' },
+                { tag: 'NORWEGIA', title: 'Lofoty bez tłumów', href: '/blog', img: '/lofoten.webp' },
+                { tag: 'USA', title: 'Roadtrip przez parki', href: '/blog', img: '/usa.webp' },
+                { tag: 'ISLANDIA', title: 'Zorza, wodospady i mgła', href: '/blog', img: '/iceland.webp' },
               ].map((p) => (
                 <Link
                   key={p.title}
                   href={p.href}
-                  className="rounded-lg overflow-hidden border border-gray-200/70 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md transition"
+                  className="rounded-lg overflow-hidden border border-gray-200/70 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md transition w-full max-w-sm"
                 >
-                  <div className="h-32 bg-gradient-to-br from-orange-100 to-orange-300 dark:from-gray-700 dark:to-gray-600" />
-                  <div className="p-4">
+                  <div className="h-40 relative">
+                    <Image
+                      src={p.img}
+                      alt={p.title}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                    />
+                  </div>
+                  <div className="p-4 text-left">
                     <span className="text-[11px] tracking-wider font-semibold text-[#f1861e]">{p.tag}</span>
                     <h3 className="mt-2 font-semibold">{p.title}</h3>
                     <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Czytaj dalej →</p>
@@ -133,7 +138,7 @@ export default function Home() {
               ))}
             </div>
 
-            <div className="mt-6 text-center">
+            <div className="mt-6">
               <Link href="/blog" className="text-[#f1861e] font-medium underline">
                 Zobacz wszystkie wpisy
               </Link>
@@ -142,8 +147,8 @@ export default function Home() {
         </section>
 
         {/* Promocje */}
-        <section className="max-w-6xl mx-auto px-4 my-14">
-          <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center">✈️ Promocje linii lotniczych</h2>
+        <section className="max-w-6xl mx-auto px-4 my-14 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold mb-6">✈️ Promocje linii lotniczych</h2>
           <PromocjeLinii />
         </section>
 
