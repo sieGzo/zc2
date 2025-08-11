@@ -40,7 +40,8 @@ export default function Home() {
           <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#f1861e]/15 to-transparent dark:from-[#f1861e]/10" />
 
           <div className="relative max-w-6xl mx-auto text-center">
-            <p className="inline-flex items-center gap-2 text-[30px] uppercase tracking-wider text-[#f1861e]">
+            <p className="inline-flex items-center gap-2 text-[30px] uppercase tracking-wider 
+                          text-[#d46a00] dark:text-[#ff9c3a]">
               🦊 Zwiedzaj&nbsp;mądrze… Zwiedzaj&nbsp;chytrze 😉
             </p>
 
