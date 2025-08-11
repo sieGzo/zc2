@@ -169,26 +169,22 @@ ul[role="listbox"] > li:hover,
 
 /* --- Reusable UI (pasuje do Twojego Tailwinda) --- */
 @layer components {
-  /* Buttons */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors
+    @apply inline-flex items-center justify-center gap-2 rounded-md font-semibold
+           transition-colors align-middle
            focus-visible:outline-none focus-visible:ring-2 ring-offset-2
            dark:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-sm { @apply px-3 py-1.5 text-sm; }
-  .btn-md { @apply px-4 py-2; }
+  .btn-md { @apply px-4 py-2 text-base; }
 
-  .btn-primary {
-    @apply bg-[#f1861e] text-white hover:bg-orange-600 focus-visible:ring-[#f1861e];
-  }
-  .btn-outline {
-    @apply border border-[#f1861e] text-[#f1861e]
-           hover:bg-orange-50 dark:hover:bg-gray-800 focus-visible:ring-[#f1861e];
-  }
-  .btn-ghost {
-    @apply text-[#f1861e] hover:bg-orange-50 dark:hover:bg-gray-800 focus-visible:ring-[#f1861e];
-  }
+  /* ✅ domyślne wypełnienie, jeśli nie podasz rozmiaru */
+  .btn:not(.btn-sm):not(.btn-md) { @apply px-4 py-2 text-base; }
 
+  .btn-primary { @apply bg-[#f1861e] text-white hover:bg-orange-600 focus-visible:ring-[#f1861e]; }
+  .btn-outline { @apply border border-[#f1861e] text-[#f1861e] hover:bg-[#f1861e]/10 focus-visible:ring-[#f1861e]; }
+  .btn-ghost   { @apply text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible:ring-gray-300; }
+}
   /* Cards */
   .card { @apply rounded-lg border border-gray-200/70 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm; }
   .card-hover { @apply hover:shadow-md transition; }
