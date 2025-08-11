@@ -42,6 +42,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const hasKeys = !!process.env.AMADEUS_CLIENT_ID && !!process.env.AMADEUS_CLIENT_SECRET
+
+  // ⬇️ check:
+res.setHeader('x-amadeus-keys', hasKeys ? 'yes' : 'no')
+
   if (!hasKeys) {
     res.setHeader('x-source', 'fallback')
     return res.status(200).json({
