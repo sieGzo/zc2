@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import { getServerSession } from 'next-auth/next'
+import { signOut } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { authOptions } from './api/auth/[...nextauth]'
 import { prisma } from '@/lib/prisma'
@@ -15,8 +16,8 @@ type DbRoute = {
   id: string
   name: string
   mode: string
-  distance: number | null // metry
-  time: number | null     // sekundy
+  distance: number | null
+  time: number | null
   geojson: any
   startLat: number | null
   startLon: number | null
@@ -99,14 +100,14 @@ export default function Profil({ user, routes }: Props) {
       return
     }
     toast.success('Konto usunięte')
-    router.push('/')
+    // Wylogowanie i przekierowanie
+    await signOut({ callbackUrl: '/' })
   }
 
   return (
     <main className="max-w-6xl mx-auto p-6">
       <Head><title>Twój profil — Zwiedzaj Chytrze</title></Head>
 
-      {/* Header */}
       <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-3xl font-extrabold">Cześć, {displayName || 'podróżniku'}!</h1>
@@ -131,7 +132,6 @@ export default function Profil({ user, routes }: Props) {
       </header>
 
       <div className="grid md:grid-cols-3 gap-6">
-        {/* Lista tras */}
         <aside className="md:col-span-1">
           <h2 className="text-lg font-semibold mb-2">Moje trasy ({routes.length})</h2>
           <ul className="space-y-2">
@@ -167,7 +167,6 @@ export default function Profil({ user, routes }: Props) {
           </ul>
         </aside>
 
-        {/* Mapa + szczegóły */}
         <section className="md:col-span-2">
           {active ? (
             <>
