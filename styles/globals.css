@@ -215,3 +215,42 @@ body.contrast button {
 }
 
 body.contrast svg { fill: currentColor !important; stroke: currentColor !important; }
+
+
+/* === Contrast: neutralizuj jasne utility-klasy Tailwinda === */
+
+/* najczęstsze białe tła/lekki szary */
+body.contrast .bg-white,
+body.contrast .bg-white\/80,
+body.contrast .bg-gray-50,
+body.contrast .bg-gray-100,
+body.contrast .dark\:bg-gray-800 { 
+  background: #000 !important;
+  color: #fff !important;
+}
+
+/* cienkie obramowania z Tailwinda -> białe */
+body.contrast .border-gray-200,
+body.contrast .border-gray-300,
+body.contrast .dark\:border-gray-700 { 
+  border-color: #fff !important;
+}
+
+/* blur i półprzezroczystości są nieczytelne w HC */
+body.contrast .backdrop-blur,
+body.contrast .backdrop-blur-md,
+body.contrast [class*="backdrop-blur"] {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: #000 !important;
+}
+
+/* słabe szarości tekstu -> białe */
+body.contrast .text-gray-400,
+body.contrast .text-gray-500,
+body.contrast .text-gray-600,
+body.contrast .dark\:text-gray-400 { 
+  color: #fff !important;
+}
+
+/* linki w HC zostają żółte – już masz to wyżej */

@@ -44,15 +44,17 @@ export default function AccessPanel() {
     } else {
       next.add(cls)
       document.body.classList.add(cls)
-      // kontrast nie miesza się z dark
       if (cls === 'contrast') {
-        document.body.classList.remove('dark')
-        next.delete('dark') // na wypadek gdyby kiedyś była zapisywana
+        // wyłącz dark na <html>, żeby tryby się nie gryzły
+        document.documentElement.classList.remove('dark')
+        localStorage.setItem('theme', 'light')
+        next.delete('dark')
       }
     }
     setActive(next)
     persist(next)
   }
+
 
   // zamykanie po kliknięciu poza i ESC + ustaw fokus po otwarciu
   useEffect(() => {
