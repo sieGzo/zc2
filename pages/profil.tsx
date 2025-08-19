@@ -12,7 +12,7 @@ import { useToast } from '@/components/Toaster'
 type DbRoute = {
   id: string
   name: string
-  mode: string
+  mode: 'walk' | 'bicycle' | string
   distance: number | null
   time: number | null
   geojson: any
@@ -46,15 +46,8 @@ function extractCoords(geojson: any): [number, number][] {
   }
   return out
 }
-
-function capFirst(s?: string | null) {
-  if (!s) return ''
-  return s.charAt(0).toUpperCase() + s.slice(1)
-}
-function formatKm(meters?: number | null) {
-  if (!meters || meters <= 0) return null
-  return `${(meters / 1000).toFixed(1)} km`
-}
+const modeLabel = (m?: string) => (m === 'walk' ? 'piesza' : m === 'bicycle' ? 'rowerowa' : m || '—')
+const formatKm = (meters?: number | null) => (!meters || meters <= 0 ? '—' : `${(meters / 1000).toFixed(1)} km`)
 function formatDuration(seconds?: number | null) {
   if (!seconds || seconds <= 0) return '—'
   const minutes = Math.round(seconds / 60)
@@ -64,7 +57,7 @@ function formatDuration(seconds?: number | null) {
   return m ? `${h} h ${m} min` : `${h} h`
 }
 
-// Linki do nawigacji bazujące na zapisanych punktach (lat,lon)
+// Linki
 function buildGoogleLink(r: DbRoute) {
   const travelmode = r.mode === 'walk' ? 'walking' : 'bicycling'
   const s = r.startLat != null && r.startLon != null ? `${r.startLat},${r.startLon}` : ''
@@ -73,10 +66,9 @@ function buildGoogleLink(r: DbRoute) {
   return `https://www.google.com/maps/dir/?${q.toString()}`
 }
 function buildAppleLink(r: DbRoute) {
-  // Apple Maps: tylko „walk” – bicycling brak wsparcia
   const s = r.startLat != null && r.startLon != null ? `${r.startLat},${r.startLon}` : ''
   const e = r.endLat != null && r.endLon != null ? `${r.endLat},${r.endLon}` : ''
-  const q = new URLSearchParams({ saddr: s, daddr: e, dirflg: 'w' })
+  const q = new URLSearchParams({ saddr: s, daddr: e, dirflg: 'w' }) // tylko piesza
   return `http://maps.apple.com/?${q.toString()}`
 }
 function buildOsmLink(r: DbRoute) {
@@ -86,20 +78,18 @@ function buildOsmLink(r: DbRoute) {
   return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_${engine}&route=${route}`
 }
 function buildGpxHref(r: DbRoute) {
-  // GPX z DB (bez ponownego routingu)
   return `/api/routes/${r.id}/gpx`
 }
 
 export default function Profil({ user, routes }: Props) {
   const toast = useToast()
-
   const [activeId, setActiveId] = useState<string | null>(routes[0]?.id ?? null)
   const active = useMemo(() => routes.find(r => r.id === activeId) || null, [routes, activeId])
   const coords = useMemo(() => extractCoords(active?.geojson), [active])
 
   const displayName =
-    capFirst(user.name) ||
-    capFirst(user.email?.split('@')[0] || '')
+    (user.name || user.email?.split('@')[0] || '')
+      .replace(/^./, c => c.toUpperCase())
 
   async function remove(id: string) {
     if (!confirm('Usunąć tę trasę?')) return
@@ -112,7 +102,6 @@ export default function Profil({ user, routes }: Props) {
     toast.success('Trasa usunięta')
     window.location.reload()
   }
-
   async function deleteAccount() {
     if (!confirm('Na pewno usunąć konto? Tej operacji nie da się cofnąć.')) return
     const r = await fetch('/api/auth/delete-account', { method: 'POST' })
@@ -129,47 +118,53 @@ export default function Profil({ user, routes }: Props) {
     active?.startLat != null && active?.startLon != null && active?.endLat != null && active?.endLon != null
 
   return (
-    <main className="max-w-6xl mx-auto p-6">
+    <main className="max-w-6xl mx-auto p-4 sm:p-6">
       <Head><title>Twój profil — Zwiedzaj Chytrze</title></Head>
 
-      <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-extrabold">Cześć, {displayName || 'podróżniku'}!</h1>
-          <p className="text-gray-600 dark:text-gray-400">
+      {/* HEADER: na mobile pionowo, od sm obok siebie */}
+      <header className="mb-5 sm:mb-6">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl md:text-3xl font-extrabold leading-tight">Cześć, {displayName || 'podróżniku'}!</h1>
+          <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
             Tu znajdziesz zapisane trasy. Możesz je podejrzeć, usunąć albo wrócić do planera.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Link href="/trails" className="btn btn-outline">Przejdź do planera</Link>
-          <button onClick={deleteAccount} className="btn btn-primary bg-red-600 hover:bg-red-700">
+
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:flex sm:items-center sm:gap-3">
+          <Link href="/trails" className="btn btn-outline w-full sm:w-auto justify-center">Przejdź do planera</Link>
+          <button onClick={deleteAccount} className="btn btn-primary bg-red-600 hover:bg-red-700 w-full sm:w-auto">
             Usuń konto
           </button>
         </div>
       </header>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
+        {/* LISTA TRAS */}
         <aside className="md:col-span-1">
-          <h2 className="text-lg font-semibold mb-2">Moje trasy ({routes.length})</h2>
+          <h2 className="text-base md:text-lg font-semibold mb-2">Moje trasy ({routes.length})</h2>
           <ul className="space-y-2">
             {routes.map(r => {
               const km = formatKm(r.distance)
               const dur = formatDuration(r.time)
-              const activeCls = activeId === r.id ? 'bg-orange-50 border-orange-200' : 'bg-white'
+              const isActive = activeId === r.id
+              const activeCls = isActive
+                ? 'bg-orange-50 border-orange-200 dark:bg-gray-800/60'
+                : 'bg-white dark:bg-gray-800'
               return (
-                <li key={r.id} className={`p-3 border rounded ${activeCls} dark:bg-gray-800 dark:border-gray-700`}>
+                <li key={r.id} className={`p-3 border rounded ${activeCls} dark:border-gray-700`}>
                   <button
                     className="text-left w-full"
                     onClick={() => setActiveId(r.id)}
-                    aria-current={activeId === r.id ? 'true' : 'false'}
+                    aria-current={isActive ? 'true' : 'false'}
                   >
                     <div className="font-medium truncate">{r.name}</div>
                     <div className="text-xs text-gray-600 dark:text-gray-400">
-                      {km ? `${km} · ` : ''}{r.mode}{r.time ? ` · ${dur}` : ''}
+                      {km} · {modeLabel(r.mode)}{r.time ? ` · ${dur}` : ''}
                     </div>
                   </button>
-                  <div className="flex gap-3 mt-2 text-sm">
-                    <Link className="text-[#f1861e] hover:underline" href={`/trails/${r.id}`}>Podgląd</Link>
-                    <button className="text-red-600 hover:underline" onClick={() => remove(r.id)}>Usuń</button>
+                  <div className="flex gap-2 mt-2">
+                    <Link className="btn btn-sm btn-ghost" href={`/trails/${r.id}`}>Podgląd</Link>
+                    <button className="btn btn-sm btn-ghost text-red-600" onClick={() => remove(r.id)}>Usuń</button>
                   </div>
                 </li>
               )
@@ -183,44 +178,34 @@ export default function Profil({ user, routes }: Props) {
           </ul>
         </aside>
 
+        {/* PANEL TRASY */}
         <section className="md:col-span-2">
           {active ? (
             <>
               <div className="mb-3">
-                <div className="text-lg font-semibold">{active.name}</div>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <span className="pill">{formatKm(active.distance) ?? '—'}</span>
+                <div className="text-lg md:text-xl font-semibold">{active.name}</div>
+                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <span className="pill">{formatKm(active.distance)}</span>
                   <span className="pill">{formatDuration(active.time)}</span>
-                  <span className="pill">{active.mode}</span>
+                  <span className="pill">{modeLabel(active.mode)}</span>
                 </div>
               </div>
 
-              {/* Akcje dla trasy */}
               <div className="card">
                 <div className="card-body">
                   <div className="flex flex-wrap items-center gap-3">
                     {hasEndpoints ? (
-                      <a
-                        href={buildGoogleLink(active)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn btn-outline"
-                      >
+                      <a href={buildGoogleLink(active)} target="_blank" rel="noreferrer" className="btn btn-outline">
                         Otwórz w Google Maps
                       </a>
                     ) : (
                       <button className="btn btn-outline" disabled>Otwórz w Google Maps</button>
                     )}
 
-                    {/* Apple tylko dla pieszych */}
+                    {/* Apple tylko piesza */}
                     {active.mode === 'walk' ? (
                       hasEndpoints ? (
-                        <a
-                          href={buildAppleLink(active)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="btn btn-ghost"
-                        >
+                        <a href={buildAppleLink(active)} target="_blank" rel="noreferrer" className="btn btn-ghost">
                           Otwórz w Apple Maps
                         </a>
                       ) : (
@@ -230,20 +215,10 @@ export default function Profil({ user, routes }: Props) {
 
                     {hasEndpoints ? (
                       <>
-                        <a
-                          href={buildOsmLink(active)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="btn btn-ghost"
-                        >
+                        <a href={buildOsmLink(active)} target="_blank" rel="noreferrer" className="btn btn-ghost">
                           Otwórz w OSM
                         </a>
-                        <a
-                          href={buildGpxHref(active)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="btn btn-ghost"
-                        >
+                        <a href={buildGpxHref(active)} target="_blank" rel="noreferrer" className="btn btn-ghost">
                           Pobierz GPX
                         </a>
                       </>
@@ -255,11 +230,10 @@ export default function Profil({ user, routes }: Props) {
                     )}
                   </div>
 
-                  {/* Podgląd skrócony listy współrzędnych (bez mapy) */}
                   {coords.length > 0 && (
-                    <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                    <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
                       Pkt. na trasie: {coords.length}. (Podgląd mapy został wyłączony.)
-                    </div>
+                    </p>
                   )}
                 </div>
               </div>
@@ -279,16 +253,12 @@ export async function getServerSideProps(
   const session = await getServerSession(ctx.req, ctx.res, authOptions)
   if (!session) {
     return {
-      redirect: {
-        destination: `/login?callbackUrl=${encodeURIComponent('/profil')}`,
-        permanent: false,
-      },
+      redirect: { destination: `/login?callbackUrl=${encodeURIComponent('/profil')}`, permanent: false }
     }
   }
 
   const anyUser = session.user as any
   let userId: string | null = anyUser?.id ?? null
-
   if (!userId && anyUser?.email) {
     const u = await prisma.user.findUnique({ where: { email: anyUser.email } })
     userId = u?.id ?? null
