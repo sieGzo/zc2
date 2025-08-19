@@ -71,17 +71,14 @@ export default function Home() {
           <div className="relative max-w-6xl mx-auto grid md:grid-cols-2 gap-8 items-center">
             {/* Copy */}
             <div>
-              <span className="kicker inline-flex items-center gap-2">
-                🦊 Zwiedzaj mądrze. Zwiedzaj chytrze.
-              </span>
+              <h1 className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight">
+                🦊 Zwiedzaj mądrze. Zwiedzaj chytrze.</h1>
+              
               <h1 className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight">
                 <span className="text-[#f1861e]">Planer tras</span>{' '}
                 <span className="text-gray-900 dark:text-white">+ blog podróżniczy</span>
               </h1>
-              <p className="mt-4 text-lg md:text-xl text-gray-700 dark:text-gray-300">
-                Zaplanuj pieszo lub rowerem, zapisz trasę i wróć do niej później.
-                A gdy szukasz pomysłów — wpadnij na bloga po świeże inspiracje.
-              </p>
+        
 
               <div className="mt-8 flex flex-col sm:flex-row items-center gap-3">
                 <Link href="/trails" className="btn btn-primary rounded-full btn-md w-full sm:w-auto">
@@ -91,29 +88,7 @@ export default function Home() {
                   📖 Przejdź do bloga
                 </Link>
               </div>
-
-              {/* szybkie atuty */}
-              <div className="mt-6 flex flex-wrap gap-2">
-                <span className="pill">Pieszo i rower</span>
-                <span className="pill">Linki do nawigacji</span>
-                <span className="pill">Export GPX</span>
-                <span className="pill">Dark mode</span>
-              </div>
-            </div>
-
-            {/* Hero image */}
-            <div className="relative hidden md:block">
-              <div className="rounded-2xl overflow-hidden shadow-sm border border-gray-200/70 dark:border-gray-700">
-                <Image
-                  src="/hero2.webp"
-                  alt="Mapa i planowanie trasy w Zwiedzaj Chytrze"
-                  width={960}
-                  height={720}
-                  priority
-                  className="object-cover w-full h-auto"
-                />
-              </div>
-            </div>
+          </div>
           </div>
         </section>
 

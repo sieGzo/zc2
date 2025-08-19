@@ -118,19 +118,21 @@ export default function Profil({ user, routes }: Props) {
     active?.startLat != null && active?.startLon != null && active?.endLat != null && active?.endLon != null
 
   return (
-    <main className="max-w-6xl mx-auto p-4 sm:p-6">
+    <main className="max-w-6xl mx-auto p-4 sm:p-6 overflow-x-hidden">
       <Head><title>Twój profil — Zwiedzaj Chytrze</title></Head>
 
-      {/* HEADER: na mobile pionowo, od sm obok siebie */}
+      {/* HEADER: na mobile pionowo, od sm obok siebie; wrap gdy brakuje miejsca */}
       <header className="mb-5 sm:mb-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl md:text-3xl font-extrabold leading-tight">Cześć, {displayName || 'podróżniku'}!</h1>
+        <div className="flex flex-col gap-2 min-w-0">
+          <h1 className="text-2xl md:text-3xl font-extrabold leading-tight break-words">
+            Cześć, {displayName || 'podróżniku'}!
+          </h1>
           <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">
             Tu znajdziesz zapisane trasy. Możesz je podejrzeć, usunąć albo wrócić do planera.
           </p>
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:flex sm:items-center sm:gap-3">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
           <Link href="/trails" className="btn btn-outline w-full sm:w-auto justify-center">Przejdź do planera</Link>
           <button onClick={deleteAccount} className="btn btn-primary bg-red-600 hover:bg-red-700 w-full sm:w-auto">
             Usuń konto
@@ -140,7 +142,7 @@ export default function Profil({ user, routes }: Props) {
 
       <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
         {/* LISTA TRAS */}
-        <aside className="md:col-span-1">
+        <aside className="md:col-span-1 min-w-0">
           <h2 className="text-base md:text-lg font-semibold mb-2">Moje trasy ({routes.length})</h2>
           <ul className="space-y-2">
             {routes.map(r => {
@@ -151,13 +153,13 @@ export default function Profil({ user, routes }: Props) {
                 ? 'bg-orange-50 border-orange-200 dark:bg-gray-800/60'
                 : 'bg-white dark:bg-gray-800'
               return (
-                <li key={r.id} className={`p-3 border rounded ${activeCls} dark:border-gray-700`}>
+                <li key={r.id} className={`p-3 border rounded ${activeCls} dark:border-gray-700 min-w-0`}>
                   <button
-                    className="text-left w-full"
+                    className="text-left w-full block min-w-0"
                     onClick={() => setActiveId(r.id)}
                     aria-current={isActive ? 'true' : 'false'}
                   >
-                    <div className="font-medium truncate">{r.name}</div>
+                    <div className="font-medium truncate break-words">{r.name}</div>
                     <div className="text-xs text-gray-600 dark:text-gray-400">
                       {km} · {modeLabel(r.mode)}{r.time ? ` · ${dur}` : ''}
                     </div>
@@ -179,11 +181,11 @@ export default function Profil({ user, routes }: Props) {
         </aside>
 
         {/* PANEL TRASY */}
-        <section className="md:col-span-2">
+        <section className="md:col-span-2 min-w-0">
           {active ? (
             <>
-              <div className="mb-3">
-                <div className="text-lg md:text-xl font-semibold">{active.name}</div>
+              <div className="mb-3 min-w-0">
+                <div className="text-lg md:text-xl font-semibold break-words">{active.name}</div>
                 <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-1">
                   <span className="pill">{formatKm(active.distance)}</span>
                   <span className="pill">{formatDuration(active.time)}</span>
