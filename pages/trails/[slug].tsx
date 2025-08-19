@@ -1,11 +1,8 @@
 // pages/trails/[slug].tsx
 import Head from 'next/head'
 import type { GetServerSideProps, GetServerSidePropsContext } from 'next'
-import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-
-const RouteMap = dynamic(() => import('@/components/RouteMap'), { ssr: false })
 
 type DbRoute = {
   id: string
@@ -23,23 +20,29 @@ type DbRoute = {
 
 type Props = { route: DbRoute | null }
 
-function extractCoords(geojson: any): [number, number][] {
-  const out: [number, number][] = []
-  if (!geojson) return out
-  if (geojson.type === 'FeatureCollection') {
-    for (const f of geojson.features ?? []) {
-      const g = f?.geometry
-      if (!g) continue
-      if (g.type === 'LineString') {
-        for (const [lon, lat] of g.coordinates) out.push([lat, lon])
-      } else if (g.type === 'MultiLineString') {
-        for (const seg of g.coordinates) for (const [lon, lat] of seg) out.push([lat, lon])
-      }
-    }
-  } else if (geojson.type === 'LineString') {
-    for (const [lon, lat] of geojson.coordinates ?? []) out.push([lat, lon])
-  }
-  return out
+// link builders
+function buildGoogleLink(r: DbRoute) {
+  const travelmode = r.mode === 'walk' ? 'walking' : 'bicycling'
+  const s = r.startLat != null && r.startLon != null ? `${r.startLat},${r.startLon}` : ''
+  const e = r.endLat != null && r.endLon != null ? `${r.endLat},${r.endLon}` : ''
+  const q = new URLSearchParams({ api: '1', origin: s, destination: e, travelmode })
+  return `https://www.google.com/maps/dir/?${q.toString()}`
+}
+function buildAppleLink(r: DbRoute) {
+  const dirflg = r.mode === 'walk' ? 'w' : 'r'
+  const s = r.startLat != null && r.startLon != null ? `${r.startLat},${r.startLon}` : ''
+  const e = r.endLat != null && r.endLon != null ? `${r.endLat},${r.endLon}` : ''
+  const q = new URLSearchParams({ saddr: s, daddr: e, dirflg })
+  return `http://maps.apple.com/?${q.toString()}`
+}
+function buildOsmLink(r: DbRoute) {
+  if (r.startLat == null || r.startLon == null || r.endLat == null || r.endLon == null) return '#'
+  const engine = r.mode === 'walk' ? 'foot' : 'bicycle'
+  const route = `${r.startLat},${r.startLon};${r.endLat},${r.endLon}`
+  return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_${engine}&route=${route}`
+}
+function buildGpxHref(r: DbRoute) {
+  return `/api/routes/${r.id}/gpx`
 }
 
 export default function TrailPage({ route }: Props) {
@@ -52,10 +55,6 @@ export default function TrailPage({ route }: Props) {
       </main>
     )
   }
-
-  const coords = extractCoords(route.geojson)
-  const start = route.startLat && route.startLon ? [route.startLat, route.startLon] as [number, number] : undefined
-  const end = route.endLat && route.endLon ? [route.endLat, route.endLon] as [number, number] : undefined
 
   return (
     <>
@@ -71,8 +70,22 @@ export default function TrailPage({ route }: Props) {
           {Math.round((route.time ?? 0)/60)} min • {new Date(route.createdAt).toLocaleString()}
         </p>
 
-        <section className="rounded-xl overflow-hidden border">
-          <RouteMap start={start} end={end} coords={coords} onPointSelect={() => {}} />
+        <section className="rounded-xl overflow-hidden border p-4">
+          <div className="flex flex-wrap gap-3">
+            <a href={buildGoogleLink(route)} target="_blank" rel="noreferrer" className="px-3 py-2 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">
+              Otwórz w Google Maps
+            </a>
+            <a href={buildAppleLink(route)} target="_blank" rel="noreferrer" className="px-3 py-2 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">
+              Otwórz w Apple Maps
+            </a>
+            <a href={buildOsmLink(route)} target="_blank" rel="noreferrer" className="px-3 py-2 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">
+              Otwórz w OSM
+            </a>
+            <a href={buildGpxHref(route)} target="_blank" rel="noreferrer" className="px-3 py-2 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">
+              Pobierz GPX
+            </a>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">Podgląd mapy został wyłączony.</p>
         </section>
       </main>
     </>
