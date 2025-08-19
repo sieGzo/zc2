@@ -1,0 +1,99 @@
+C:\Users\Gierki\zwiedzajchytrze-clean
+├── components
+|  ├── AccessPanel.tsx
+|  ├── AuthForm.tsx
+|  ├── DestinationCarousel.tsx
+|  ├── Footer.tsx
+|  ├── GeoAutocomplete.tsx
+|  ├── HeroSlider.tsx
+|  ├── IntroVideo.tsx
+|  ├── LisekLoader.tsx
+|  ├── Navbar.tsx
+|  ├── PlaceCard.tsx
+|  ├── PromocjeLinii.tsx
+|  ├── ScrollToTop.tsx
+|  ├── SessionSync.tsx
+|  ├── ThemeToggle.tsx
+|  ├── Toaster.tsx
+|  ├── TrailCard.tsx
+|  ├── TurnstileWidget.tsx
+|  └── ui
+├── git
+├── hooks
+|  └── useauth.ts
+├── lib
+|  ├── amadeus.ts
+|  ├── api
+|  ├── cn.ts
+|  ├── db.ts
+|  ├── email.ts
+|  ├── geoapify.ts
+|  └── prisma.ts
+├── middleware.ts
+├── next-env.d.ts
+├── next.config.js
+├── package-lock.json
+├── package.json
+├── pages
+|  ├── admin
+|  ├── api
+|  ├── auth
+|  ├── blog.tsx
+|  ├── index.tsx
+|  ├── kontakt.tsx
+|  ├── login.tsx
+|  ├── nowe-haslo.tsx
+|  ├── o-mnie.tsx
+|  ├── offers
+|  ├── places
+|  ├── potwierdz-email-wyslany.tsx
+|  ├── potwierdz-email.tsx
+|  ├── profil.tsx
+|  ├── register.tsx
+|  ├── reset-hasla.tsx
+|  ├── trails
+|  ├── user
+|  ├── _app.tsx
+|  └── _document.tsx
+├── partial-tree.txt
+├── PATCH_NOTES.md
+├── postcss.config.js
+├── prisma
+|  ├── migrations
+|  └── schema.prisma
+├── public
+|  ├── baner.jpg
+|  ├── been.jpg
+|  ├── contact.JPG
+|  ├── counter.json
+|  ├── explore.jpg
+|  ├── favicon.png
+|  ├── favicon3.png
+|  ├── hero-travel.png
+|  ├── hero1.webp
+|  ├── hero2.webp
+|  ├── hero3.webp
+|  ├── iceland.webp
+|  ├── intro.mp4
+|  ├── lisek-bimi.svg
+|  ├── lisek-email.png
+|  ├── lisek-loader.png
+|  ├── lofoten.webp
+|  ├── logo.png
+|  ├── logo.svg
+|  ├── logo500x500.svg
+|  ├── placeholder.jpg
+|  ├── profil.jpg
+|  └── usa.webp
+├── README.txt
+├── scripts
+|  └── backfill-iphash.js
+├── styles
+|  └── globals.css
+├── tailwind.config.js
+├── tree.txt
+└── tsconfig.json
+
+directory: 254 file: 76
+
+ignored: directory (1)
