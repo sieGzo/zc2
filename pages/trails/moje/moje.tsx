@@ -1,8 +1,6 @@
+// pages/trails/moje/moje.tsx
 import Head from "next/head";
 import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
-
-const RouteMap = dynamic(() => import("@/components/RouteMap"), { ssr: false });
 
 type Saved = {
   id: number;
@@ -31,6 +29,43 @@ function extractCoords(geojson: any): [number, number][] {
   return out;
 }
 
+// Link builders
+function googleLink(i: Saved) {
+  const travelmode = i.mode === "walk" ? "walking" : "bicycling";
+  const origin =
+    i.startLabel?.trim() ||
+    (i.start ? `${i.start[0]},${i.start[1]}` : "");
+  const destination =
+    i.endLabel?.trim() ||
+    (i.end ? `${i.end[0]},${i.end[1]}` : "");
+  if (!origin || !destination) return "#";
+  const q = new URLSearchParams({ api: "1", origin, destination, travelmode });
+  return `https://www.google.com/maps/dir/?${q.toString()}`;
+}
+function appleLink(i: Saved) {
+  const dirflg = i.mode === "walk" ? "w" : "r";
+  const s =
+    i.startLabel?.trim() ||
+    (i.start ? `${i.start[0]},${i.start[1]}` : "");
+  const e =
+    i.endLabel?.trim() ||
+    (i.end ? `${i.end[0]},${i.end[1]}` : "");
+  if (!s || !e) return "#";
+  const q = new URLSearchParams({ saddr: s, daddr: e, dirflg });
+  return `http://maps.apple.com/?${q.toString()}`;
+}
+function osmLink(i: Saved) {
+  if (!i.start || !i.end) return "#";
+  const engine = i.mode === "walk" ? "foot" : "bicycle";
+  const route = `${i.start[0]},${i.start[1]};${i.end[0]},${i.end[1]}`;
+  return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_${engine}&route=${route}`;
+}
+function gpxHref(i: Saved) {
+  if (!i.start || !i.end) return "#";
+  const mode = i.mode === "walk" ? "walk" : "bicycle";
+  return `/api/geo/route.gpx?mode=${mode}&p=${i.start[0]},${i.start[1]}&p=${i.end[0]},${i.end[1]}`;
+}
+
 export default function MyTrailsPage() {
   const [items, setItems] = useState<Saved[]>([]);
   const [active, setActive] = useState<Saved | null>(null);
@@ -51,6 +86,25 @@ export default function MyTrailsPage() {
   }
 
   const coords = active ? extractCoords(active.geojson) : [];
+  const canGoogleApple =
+    !!active &&
+    !!(
+      (active.startLabel && active.endLabel) ||
+      (active.start && active.end)
+    );
+  const hasCoords = !!active?.start && !!active?.end;
+
+  const disabledCls = "opacity-50 pointer-events-none cursor-not-allowed";
+  const btnCls = "px-3 py-2 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700";
+
+  const kmText =
+    active?.distance && active.distance > 0
+      ? `${(active.distance / 1000).toFixed(1)} km`
+      : "—";
+  const timeText =
+    active?.time && active.time > 0
+      ? `${Math.round(active.time / 60)} min`
+      : "—";
 
   return (
     <main className="max-w-6xl mx-auto p-6">
@@ -84,10 +138,62 @@ export default function MyTrailsPage() {
               <div className="mb-3">
                 <div className="text-lg font-semibold">{active.name}</div>
                 <div className="text-sm text-gray-600">
-                  {(active.distance! / 1000).toFixed(1)} km · {Math.round((active.time ?? 0) / 60)} min
+                  {kmText} · {timeText} · {active.mode === "walk" ? "piesza" : "rowerowa"}
                 </div>
               </div>
-              <RouteMap start={active.start} end={active.end} coords={coords} onPointSelect={() => {}} />
+
+              {/* Zamiast RouteMap — przyciski akcji */}
+              <div className="rounded-xl border p-4">
+                <div className="flex flex-wrap gap-3">
+                  <a
+                    href={active ? googleLink(active) : "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`${btnCls} ${canGoogleApple ? "" : disabledCls}`}
+                    aria-disabled={!canGoogleApple}
+                    title={!canGoogleApple ? "Potrzebne punkty start/meta lub etykiety" : ""}
+                  >
+                    Otwórz w Google Maps
+                  </a>
+                  <a
+                    href={active ? appleLink(active) : "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`${btnCls} ${canGoogleApple ? "" : disabledCls}`}
+                    aria-disabled={!canGoogleApple}
+                    title={!canGoogleApple ? "Potrzebne punkty start/meta lub etykiety" : ""}
+                  >
+                    Otwórz w Apple Maps
+                  </a>
+                  <a
+                    href={active ? osmLink(active) : "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`${btnCls} ${hasCoords ? "" : disabledCls}`}
+                    aria-disabled={!hasCoords}
+                    title={!hasCoords ? "OSM wymaga współrzędnych start/meta" : ""}
+                  >
+                    Otwórz w OSM
+                  </a>
+                  <a
+                    href={active ? gpxHref(active) : "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`${btnCls} ${hasCoords ? "" : disabledCls}`}
+                    aria-disabled={!hasCoords}
+                    title={!hasCoords ? "GPX wymaga współrzędnych start/meta" : ""}
+                  >
+                    Pobierz GPX
+                  </a>
+                </div>
+
+                {/* Informacja pomocnicza */}
+                {coords.length > 0 && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Pkt. na trasie: {coords.length}. (Podgląd mapy został wyłączony.)
+                  </p>
+                )}
+              </div>
             </>
           ) : (
             <p>Wybierz trasę z listy.</p>
