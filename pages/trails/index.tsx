@@ -1,3 +1,4 @@
+// pages/trails/index.tsx
 import Head from "next/head";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
@@ -115,11 +116,12 @@ export default function TrailsPage() {
     return `https://www.google.com/maps/dir/?${q.toString()}`;
   }
 
+  // Apple Maps pokazujemy tylko w trybie pieszym (rower w Apple nie działa)
   function appleLink() {
-    const dirflg = mode === "walk" ? "w" : "r";
     const s = startLabel || (start ? `${start[0]},${start[1]}` : "");
     const e = endLabel || (end ? `${end[0]},${end[1]}` : "");
-    const q = new URLSearchParams({ saddr: s, daddr: e, dirflg });
+    // dirflg: w = walking, d = driving; dla nas tylko walking
+    const q = new URLSearchParams({ saddr: s, daddr: e, dirflg: "w" });
     return `http://maps.apple.com/?${q.toString()}`;
   }
 
@@ -158,8 +160,8 @@ export default function TrailsPage() {
     }
   }
 
-  const canOpenExternal =
-    (startLabel && endLabel) || (start && end); // tekst albo współrzędne
+  const canOpenExternal = (startLabel && endLabel) || (start && end); // tekst albo współrzędne
+  const hasCoords = !!start && !!end;
 
   return (
     <main className="max-w-5xl mx-auto p-6">
@@ -167,8 +169,14 @@ export default function TrailsPage() {
         <title>Planer trasy — Zwiedzaj Chytrze</title>
       </Head>
 
-      <h1 className="text-3xl font-bold mb-4">Planer trasy</h1>
+      <header className="mb-5">
+        <h1 className="text-3xl font-extrabold tracking-tight">Planer trasy</h1>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          Wybierz punkty, zaplanuj trasę i otwórz w ulubionej nawigacji albo pobierz GPX.
+        </p>
+      </header>
 
+      {/* Sekcja wyboru punktów */}
       <div className="grid sm:grid-cols-2 gap-4 mb-4">
         <GeoAutocomplete
           label="Punkt startowy"
@@ -190,89 +198,115 @@ export default function TrailsPage() {
         />
       </div>
 
+      {/* Tryb: przełącznik przyciskowy */}
       <div className="flex items-center gap-3 mb-3">
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            name="mode"
-            checked={mode === "walk"}
-            onChange={() => setMode("walk")}
-          />{" "}
-          piesza
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            name="mode"
-            checked={mode === "bicycle"}
-            onChange={() => setMode("bicycle")}
-          />{" "}
-          rowerowa
-        </label>
+        <div className="inline-flex rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <button
+            className={`btn btn-md ${mode === "walk" ? "btn-primary" : "btn-ghost"}`}
+            onClick={() => setMode("walk")}
+            aria-pressed={mode === "walk"}
+          >
+            Piesza
+          </button>
+          <button
+            className={`btn btn-md ${mode === "bicycle" ? "btn-primary" : "btn-ghost"}`}
+            onClick={() => setMode("bicycle")}
+            aria-pressed={mode === "bicycle"}
+          >
+            Rowerowa
+          </button>
+        </div>
+
         <button onClick={plan} className="ml-auto btn btn-primary">
           Zaplanuj
         </button>
       </div>
+
+      <p className="mb-2 text-sm text-gray-600 dark:text-gray-400">
+        Podpowiedź: możesz wpisać nazwę i wcisnąć <kbd className="px-1 py-0.5 border rounded">Enter</kbd>, albo wybrać z listy.
+      </p>
 
       {loading && <p className="mt-3">Liczenie trasy…</p>}
       {error && <p className="mt-3 text-red-600">{error}</p>}
 
       {route && (
         <div className="card mt-4 card-hover">
-          <div className="card-body gap-6">
-            <div className="flex items-center gap-6">
-              <div>
-                <p>
-                  <strong>Dystans:</strong> {distanceKm.toFixed(1)} km
-                </p>
-                <p>
-                  <strong>Czas:</strong> {formatDuration(minutesTotal)}
-                </p>
-              </div>
+          <div className="card-body space-y-4">
+            {/* Podsumowanie trasy */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="pill"><strong className="mr-1">Dystans:</strong> {distanceKm.toFixed(1)} km</span>
+              <span className="pill"><strong className="mr-1">Czas:</strong> {formatDuration(minutesTotal)}</span>
+              <span className="pill">{mode === "walk" ? "Piesza" : "Rowerowa"}</span>
               <button onClick={saveCurrentRoute} className="ml-auto btn btn-primary">
                 Zapisz trasę
               </button>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 pt-3">
-              <a
-                href={googleLink()}
-                target="_blank"
-                rel="noreferrer"
-                className={`btn ${canOpenExternal ? "btn-secondary" : "btn-disabled"}`}
-                aria-disabled={!canOpenExternal}
-              >
-                Otwórz w Google Maps
-              </a>
-              <a
-                href={appleLink()}
-                target="_blank"
-                rel="noreferrer"
-                className={`btn ${canOpenExternal ? "btn-ghost" : "btn-disabled"}`}
-                aria-disabled={!canOpenExternal}
-              >
-                Otwórz w Apple Maps
-              </a>
-              <a
-                href={osmLink()}
-                target="_blank"
-                rel="noreferrer"
-                className={`btn ${start && end ? "btn-ghost" : "btn-disabled"}`}
-                aria-disabled={!start || !end}
-                title={!start || !end ? "Wybierz lokalizacje z listy, by użyć OSM" : ""}
-              >
-                Otwórz w OSM
-              </a>
-              <a
-                href={`/api/geo/route.gpx?mode=${mode}&p=${start?.join(",")}&p=${end?.join(",")}`}
-                target="_blank"
-                rel="noreferrer"
-                className={`btn ${start && end ? "btn-ghost" : "btn-disabled"}`}
-                aria-disabled={!start || !end}
-                title={!start || !end ? "Wybierz lokalizacje z listy, by pobrać GPX" : ""}
-              >
-                Pobierz GPX
-              </a>
+            {/* Akcje nawigacyjne */}
+            <div className="flex flex-wrap items-center gap-3">
+              {canOpenExternal ? (
+                <a
+                  href={googleLink()}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-outline"
+                >
+                  Otwórz w Google Maps
+                </a>
+              ) : (
+                <button className="btn btn-outline" disabled>
+                  Otwórz w Google Maps
+                </button>
+              )}
+
+              {/* Apple Maps TYLKO dla pieszej */}
+              {mode === "walk" && (
+                canOpenExternal ? (
+                  <a
+                    href={appleLink()}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-ghost"
+                  >
+                    Otwórz w Apple Maps
+                  </a>
+                ) : (
+                  <button className="btn btn-ghost" disabled>
+                    Otwórz w Apple Maps
+                  </button>
+                )
+              )}
+
+              {hasCoords ? (
+                <>
+                  <a
+                    href={osmLink()}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-ghost"
+                    title=""
+                  >
+                    Otwórz w OSM
+                  </a>
+                  <a
+                    href={`/api/geo/route.gpx?mode=${mode}&p=${start?.join(",")}&p=${end?.join(",")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-ghost"
+                  >
+                    Pobierz GPX
+                  </a>
+                </>
+              ) : (
+                <>
+                  <button className="btn btn-ghost" disabled title="OSM wymaga współrzędnych start/meta">
+                    Otwórz w OSM
+                  </button>
+                  <button className="btn btn-ghost" disabled title="GPX wymaga współrzędnych start/meta">
+                    Pobierz GPX
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

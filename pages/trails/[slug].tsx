@@ -20,7 +20,7 @@ type DbRoute = {
 
 type Props = { route: DbRoute | null }
 
-// link builders
+// Link builders
 function buildGoogleLink(r: DbRoute) {
   const travelmode = r.mode === 'walk' ? 'walking' : 'bicycling'
   const s = r.startLat != null && r.startLon != null ? `${r.startLat},${r.startLon}` : ''
@@ -29,10 +29,10 @@ function buildGoogleLink(r: DbRoute) {
   return `https://www.google.com/maps/dir/?${q.toString()}`
 }
 function buildAppleLink(r: DbRoute) {
-  const dirflg = r.mode === 'walk' ? 'w' : 'r'
+  // Apple: tylko pieszo (brak bicycling)
   const s = r.startLat != null && r.startLon != null ? `${r.startLat},${r.startLon}` : ''
   const e = r.endLat != null && r.endLon != null ? `${r.endLat},${r.endLon}` : ''
-  const q = new URLSearchParams({ saddr: s, daddr: e, dirflg })
+  const q = new URLSearchParams({ saddr: s, daddr: e, dirflg: 'w' })
   return `http://maps.apple.com/?${q.toString()}`
 }
 function buildOsmLink(r: DbRoute) {
@@ -42,7 +42,20 @@ function buildOsmLink(r: DbRoute) {
   return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_${engine}&route=${route}`
 }
 function buildGpxHref(r: DbRoute) {
+  // GPX bez ponownego routingu – z DB
   return `/api/routes/${r.id}/gpx`
+}
+
+function formatKm(m: number | null | undefined) {
+  if (!m || m <= 0) return '—'
+  return `${(m / 1000).toFixed(1)} km`
+}
+function formatDuration(s: number | null | undefined) {
+  if (!s || s <= 0) return '—'
+  const minutes = Math.round(s / 60)
+  if (minutes < 60) return `${minutes} min`
+  const h = Math.floor(minutes / 60), m = minutes % 60
+  return m ? `${h} h ${m} min` : `${h} h`
 }
 
 export default function TrailPage({ route }: Props) {
@@ -56,6 +69,9 @@ export default function TrailPage({ route }: Props) {
     )
   }
 
+  const hasEndpoints =
+    route.startLat != null && route.startLon != null && route.endLat != null && route.endLon != null
+
   return (
     <>
       <Head><title>{route.name} — Zwiedzaj Chytrze</title></Head>
@@ -65,27 +81,57 @@ export default function TrailPage({ route }: Props) {
           <Link href="/trails" className="text-[#f1861e] underline">← Wszystkie trasy</Link>
         </div>
 
-        <p className="text-gray-700 dark:text-gray-300">
-          Tryb: <strong>{route.mode}</strong> • {(route.distance ?? 0) > 0 && `${((route.distance ?? 0)/1000).toFixed(1)} km`} •{' '}
-          {Math.round((route.time ?? 0)/60)} min • {new Date(route.createdAt).toLocaleString()}
-        </p>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <span className="pill">{route.mode}</span>
+          <span className="pill">{formatKm(route.distance)}</span>
+          <span className="pill">{formatDuration(route.time)}</span>
+          <span className="pill">{new Date(route.createdAt).toLocaleString()}</span>
+        </div>
 
-        <section className="rounded-xl overflow-hidden border p-4">
-          <div className="flex flex-wrap gap-3">
-            <a href={buildGoogleLink(route)} target="_blank" rel="noreferrer" className="px-3 py-2 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">
-              Otwórz w Google Maps
-            </a>
-            <a href={buildAppleLink(route)} target="_blank" rel="noreferrer" className="px-3 py-2 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">
-              Otwórz w Apple Maps
-            </a>
-            <a href={buildOsmLink(route)} target="_blank" rel="noreferrer" className="px-3 py-2 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">
-              Otwórz w OSM
-            </a>
-            <a href={buildGpxHref(route)} target="_blank" rel="noreferrer" className="px-3 py-2 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">
-              Pobierz GPX
-            </a>
+        <section className="card">
+          <div className="card-body">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              Otwórz w nawigacji lub pobierz ślad GPX.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {hasEndpoints ? (
+                <a href={buildGoogleLink(route)} target="_blank" rel="noreferrer" className="btn btn-outline">
+                  Otwórz w Google Maps
+                </a>
+              ) : (
+                <button className="btn btn-outline" disabled>Otwórz w Google Maps</button>
+              )}
+
+              {/* Apple tylko dla pieszych */}
+              {route.mode === 'walk' ? (
+                hasEndpoints ? (
+                  <a href={buildAppleLink(route)} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                    Otwórz w Apple Maps
+                  </a>
+                ) : (
+                  <button className="btn btn-ghost" disabled>Otwórz w Apple Maps</button>
+                )
+              ) : null}
+
+              {hasEndpoints ? (
+                <>
+                  <a href={buildOsmLink(route)} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                    Otwórz w OSM
+                  </a>
+                  <a href={buildGpxHref(route)} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                    Pobierz GPX
+                  </a>
+                </>
+              ) : (
+                <>
+                  <button className="btn btn-ghost" disabled>Otwórz w OSM</button>
+                  <button className="btn btn-ghost" disabled>Pobierz GPX</button>
+                </>
+              )}
+            </div>
+
+            <p className="text-xs text-gray-500 mt-3">Podgląd mapy został wyłączony.</p>
           </div>
-          <p className="text-xs text-gray-500 mt-2">Podgląd mapy został wyłączony.</p>
         </section>
       </main>
     </>

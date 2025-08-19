@@ -5,7 +5,6 @@ import { useMemo, useState } from 'react'
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { signOut } from 'next-auth/react'
-import { useRouter } from 'next/router'
 import { authOptions } from './api/auth/[...nextauth]'
 import { prisma } from '@/lib/prisma'
 import { useToast } from '@/components/Toaster'
@@ -74,10 +73,10 @@ function buildGoogleLink(r: DbRoute) {
   return `https://www.google.com/maps/dir/?${q.toString()}`
 }
 function buildAppleLink(r: DbRoute) {
-  const dirflg = r.mode === 'walk' ? 'w' : 'r'
+  // Apple Maps: tylko „walk” – bicycling brak wsparcia
   const s = r.startLat != null && r.startLon != null ? `${r.startLat},${r.startLon}` : ''
   const e = r.endLat != null && r.endLon != null ? `${r.endLat},${r.endLon}` : ''
-  const q = new URLSearchParams({ saddr: s, daddr: e, dirflg })
+  const q = new URLSearchParams({ saddr: s, daddr: e, dirflg: 'w' })
   return `http://maps.apple.com/?${q.toString()}`
 }
 function buildOsmLink(r: DbRoute) {
@@ -87,19 +86,11 @@ function buildOsmLink(r: DbRoute) {
   return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_${engine}&route=${route}`
 }
 function buildGpxHref(r: DbRoute) {
-  if (r.startLat == null || r.startLon == null || r.endLat == null || r.endLon == null) return '#'
-  const mode = r.mode === 'walk' ? 'walk' : 'bicycle'
-  const q = new URLSearchParams({
-    mode,
-    p: `${r.startLat},${r.startLon}`,
-  })
-  // drugi punkt jako drugi parametr p
-  const url = `/api/geo/route.gpx?${q.toString()}&p=${r.endLat},${r.endLon}`
-  return url
+  // GPX z DB (bez ponownego routingu)
+  return `/api/routes/${r.id}/gpx`
 }
 
 export default function Profil({ user, routes }: Props) {
-  const router = useRouter()
   const toast = useToast()
 
   const [activeId, setActiveId] = useState<string | null>(routes[0]?.id ?? null)
@@ -149,16 +140,8 @@ export default function Profil({ user, routes }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Link
-            href="/trails"
-            className="px-4 py-2 rounded-lg border border-[#f1861e] text-[#f1861e] hover:bg-orange-50 dark:hover:bg-gray-800 transition"
-          >
-            Przejdź do planera
-          </Link>
-          <button
-            onClick={deleteAccount}
-            className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
-          >
+          <Link href="/trails" className="btn btn-outline">Przejdź do planera</Link>
+          <button onClick={deleteAccount} className="btn btn-primary bg-red-600 hover:bg-red-700">
             Usuń konto
           </button>
         </div>
@@ -205,59 +188,74 @@ export default function Profil({ user, routes }: Props) {
             <>
               <div className="mb-3">
                 <div className="text-lg font-semibold">{active.name}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  {formatKm(active.distance) ?? '—'} · {formatDuration(active.time)} · {active.mode}
+                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <span className="pill">{formatKm(active.distance) ?? '—'}</span>
+                  <span className="pill">{formatDuration(active.time)}</span>
+                  <span className="pill">{active.mode}</span>
                 </div>
               </div>
 
-              {/* Zamiast RouteMap — przyciski nawigacji i GPX */}
+              {/* Akcje dla trasy */}
               <div className="card">
                 <div className="card-body">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                    Poniżej szybkie akcje dla wybranej trasy.
-                  </p>
                   <div className="flex flex-wrap items-center gap-3">
-                    <a
-                      href={active ? buildGoogleLink(active) : '#'}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`btn ${hasEndpoints ? 'btn-secondary' : 'btn-disabled'}`}
-                      aria-disabled={!hasEndpoints}
-                    >
-                      Otwórz w Google Maps
-                    </a>
-                    <a
-                      href={active ? buildAppleLink(active) : '#'}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`btn ${hasEndpoints ? 'btn-ghost' : 'btn-disabled'}`}
-                      aria-disabled={!hasEndpoints}
-                    >
-                      Otwórz w Apple Maps
-                    </a>
-                    <a
-                      href={active ? buildOsmLink(active) : '#'}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`btn ${hasEndpoints ? 'btn-ghost' : 'btn-disabled'}`}
-                      aria-disabled={!hasEndpoints}
-                      title={!hasEndpoints ? 'Ta trasa nie ma zapisanych punktów start/meta' : ''}
-                    >
-                      Otwórz w OSM
-                    </a>
-                    <a
-                      href={active ? buildGpxHref(active) : '#'}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`btn ${hasEndpoints ? 'btn-ghost' : 'btn-disabled'}`}
-                      aria-disabled={!hasEndpoints}
-                      title={!hasEndpoints ? 'Ta trasa nie ma zapisanych punktów start/meta' : ''}
-                    >
-                      Pobierz GPX
-                    </a>
+                    {hasEndpoints ? (
+                      <a
+                        href={buildGoogleLink(active)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-outline"
+                      >
+                        Otwórz w Google Maps
+                      </a>
+                    ) : (
+                      <button className="btn btn-outline" disabled>Otwórz w Google Maps</button>
+                    )}
+
+                    {/* Apple tylko dla pieszych */}
+                    {active.mode === 'walk' ? (
+                      hasEndpoints ? (
+                        <a
+                          href={buildAppleLink(active)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-ghost"
+                        >
+                          Otwórz w Apple Maps
+                        </a>
+                      ) : (
+                        <button className="btn btn-ghost" disabled>Otwórz w Apple Maps</button>
+                      )
+                    ) : null}
+
+                    {hasEndpoints ? (
+                      <>
+                        <a
+                          href={buildOsmLink(active)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-ghost"
+                        >
+                          Otwórz w OSM
+                        </a>
+                        <a
+                          href={buildGpxHref(active)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-ghost"
+                        >
+                          Pobierz GPX
+                        </a>
+                      </>
+                    ) : (
+                      <>
+                        <button className="btn btn-ghost" disabled>Otwórz w OSM</button>
+                        <button className="btn btn-ghost" disabled>Pobierz GPX</button>
+                      </>
+                    )}
                   </div>
 
-                  {/* Podgląd skrócony listy współrzędnych (opcjonalnie) */}
+                  {/* Podgląd skrócony listy współrzędnych (bez mapy) */}
                   {coords.length > 0 && (
                     <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
                       Pkt. na trasie: {coords.length}. (Podgląd mapy został wyłączony.)
