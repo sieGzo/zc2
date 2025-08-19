@@ -133,32 +133,60 @@ export default function TrailsPage() {
   }
 
   async function saveCurrentRoute() {
-    if (!route || !start || !end) return;
-    const name = `${startLabel || "Start"} → ${endLabel || "Meta"} (${
-      mode === "walk" ? "piesza" : "rowerowa"
-    })`;
+  if (!route || !start || !end) return;
 
-    try {
-      const r = await fetch("/api/routes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          mode,
-          start,
-          end,
-          distance: distanceKm * 1000, // metry
-          time: minutesTotal * 60, // sekundy
-          geojson: route,
-        }),
-      });
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data?.error || "Nie udało się zapisać trasy");
-      router.push("/szlaki/moje");
-    } catch (err: any) {
-      alert(err.message);
+  const name = `${startLabel || "Start"} → ${endLabel || "Meta"} (${
+    mode === "walk" ? "piesza" : "rowerowa"
+  })`;
+
+  // przygotuj payload raz – przyda się też do localStorage
+  const payload = {
+    name,
+    mode,
+    start,
+    end,
+    distance: distanceKm * 1000, // m
+    time: minutesTotal * 60,     // s
+    geojson: route,
+  };
+
+  try {
+    const r = await fetch("/api/routes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    // 🔒 NIEZALOGOWANY → fallback do localStorage + redirect do "moje"
+    if (r.status === 401) {
+      const key = "zc_saved_routes";
+      const list: any[] = JSON.parse(localStorage.getItem(key) || "[]");
+      // proste ID z timestampu – nie koliduje z DB id (string vs number)
+      const id = Date.now();
+      list.unshift({ id, ...payload });
+      localStorage.setItem(key, JSON.stringify(list));
+      // przejrzysty redirect do wersji localStorage
+      window.location.href = "/trails/moje/moje";
+      return;
     }
+
+    const data = await r.json().catch(() => ({}));
+
+    if (!r.ok) {
+      throw new Error(typeof data?.error === "string" ? data.error : "Nie udało się zapisać trasy");
+    }
+
+    // ✅ ZALOGOWANY → jeśli API zwróci id, idź do szczegółu; w przeciwnym razie do profilu
+    const newId = data?.id as string | undefined;
+    if (newId) {
+      window.location.href = `/trails/${newId}`;
+    } else {
+      window.location.href = "/profil";
+    }
+  } catch (err: any) {
+    alert(err?.message || "Błąd zapisu trasy");
   }
+}
 
   const canOpenExternal = (startLabel && endLabel) || (start && end); // tekst albo współrzędne
   const hasCoords = !!start && !!end;
