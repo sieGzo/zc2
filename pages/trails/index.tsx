@@ -263,8 +263,16 @@ export default function TrailsPage() {
               >
                 Otwórz w OSM
               </a>
-              {/* (opcjonalnie) Pobierz GPX */}
-              {/* <a href={`/api/geo/route.gpx?mode=${mode}&p=${start?.join(",")}&p=${end?.join(",")}`} className="btn btn-ghost">Pobierz GPX</a> */}
+              <a
+                href={`/api/geo/route.gpx?mode=${mode}&p=${start?.join(",")}&p=${end?.join(",")}`}
+                target="_blank"
+                rel="noreferrer"
+                className={`btn ${start && end ? "btn-ghost" : "btn-disabled"}`}
+                aria-disabled={!start || !end}
+                title={!start || !end ? "Wybierz lokalizacje z listy, by pobrać GPX" : ""}
+              >
+                Pobierz GPX
+              </a>
             </div>
           </div>
         </div>

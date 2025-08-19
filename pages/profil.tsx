@@ -1,7 +1,7 @@
+// pages/profil.tsx
 import Head from 'next/head'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import dynamic from 'next/dynamic'
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { signOut } from 'next-auth/react'
@@ -9,8 +9,6 @@ import { useRouter } from 'next/router'
 import { authOptions } from './api/auth/[...nextauth]'
 import { prisma } from '@/lib/prisma'
 import { useToast } from '@/components/Toaster'
-
-const RouteMap = dynamic(() => import('@/components/RouteMap'), { ssr: false })
 
 type DbRoute = {
   id: string
@@ -67,6 +65,39 @@ function formatDuration(seconds?: number | null) {
   return m ? `${h} h ${m} min` : `${h} h`
 }
 
+// Linki do nawigacji bazujące na zapisanych punktach (lat,lon)
+function buildGoogleLink(r: DbRoute) {
+  const travelmode = r.mode === 'walk' ? 'walking' : 'bicycling'
+  const s = r.startLat != null && r.startLon != null ? `${r.startLat},${r.startLon}` : ''
+  const e = r.endLat != null && r.endLon != null ? `${r.endLat},${r.endLon}` : ''
+  const q = new URLSearchParams({ api: '1', origin: s, destination: e, travelmode })
+  return `https://www.google.com/maps/dir/?${q.toString()}`
+}
+function buildAppleLink(r: DbRoute) {
+  const dirflg = r.mode === 'walk' ? 'w' : 'r'
+  const s = r.startLat != null && r.startLon != null ? `${r.startLat},${r.startLon}` : ''
+  const e = r.endLat != null && r.endLon != null ? `${r.endLat},${r.endLon}` : ''
+  const q = new URLSearchParams({ saddr: s, daddr: e, dirflg })
+  return `http://maps.apple.com/?${q.toString()}`
+}
+function buildOsmLink(r: DbRoute) {
+  if (r.startLat == null || r.startLon == null || r.endLat == null || r.endLon == null) return '#'
+  const engine = r.mode === 'walk' ? 'foot' : 'bicycle'
+  const route = `${r.startLat},${r.startLon};${r.endLat},${r.endLon}`
+  return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_${engine}&route=${route}`
+}
+function buildGpxHref(r: DbRoute) {
+  if (r.startLat == null || r.startLon == null || r.endLat == null || r.endLon == null) return '#'
+  const mode = r.mode === 'walk' ? 'walk' : 'bicycle'
+  const q = new URLSearchParams({
+    mode,
+    p: `${r.startLat},${r.startLon}`,
+  })
+  // drugi punkt jako drugi parametr p
+  const url = `/api/geo/route.gpx?${q.toString()}&p=${r.endLat},${r.endLon}`
+  return url
+}
+
 export default function Profil({ user, routes }: Props) {
   const router = useRouter()
   const toast = useToast()
@@ -100,9 +131,11 @@ export default function Profil({ user, routes }: Props) {
       return
     }
     toast.success('Konto usunięte')
-    // Wylogowanie i przekierowanie
     await signOut({ callbackUrl: '/' })
   }
+
+  const hasEndpoints =
+    active?.startLat != null && active?.startLon != null && active?.endLat != null && active?.endLon != null
 
   return (
     <main className="max-w-6xl mx-auto p-6">
@@ -176,12 +209,62 @@ export default function Profil({ user, routes }: Props) {
                   {formatKm(active.distance) ?? '—'} · {formatDuration(active.time)} · {active.mode}
                 </div>
               </div>
-              <RouteMap
-                start={active.startLat != null && active.startLon != null ? [active.startLat, active.startLon] : undefined}
-                end={active.endLat != null && active.endLon != null ? [active.endLat, active.endLon] : undefined}
-                coords={coords}
-                onPointSelect={() => {}}
-              />
+
+              {/* Zamiast RouteMap — przyciski nawigacji i GPX */}
+              <div className="card">
+                <div className="card-body">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Poniżej szybkie akcje dla wybranej trasy.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <a
+                      href={active ? buildGoogleLink(active) : '#'}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`btn ${hasEndpoints ? 'btn-secondary' : 'btn-disabled'}`}
+                      aria-disabled={!hasEndpoints}
+                    >
+                      Otwórz w Google Maps
+                    </a>
+                    <a
+                      href={active ? buildAppleLink(active) : '#'}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`btn ${hasEndpoints ? 'btn-ghost' : 'btn-disabled'}`}
+                      aria-disabled={!hasEndpoints}
+                    >
+                      Otwórz w Apple Maps
+                    </a>
+                    <a
+                      href={active ? buildOsmLink(active) : '#'}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`btn ${hasEndpoints ? 'btn-ghost' : 'btn-disabled'}`}
+                      aria-disabled={!hasEndpoints}
+                      title={!hasEndpoints ? 'Ta trasa nie ma zapisanych punktów start/meta' : ''}
+                    >
+                      Otwórz w OSM
+                    </a>
+                    <a
+                      href={active ? buildGpxHref(active) : '#'}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`btn ${hasEndpoints ? 'btn-ghost' : 'btn-disabled'}`}
+                      aria-disabled={!hasEndpoints}
+                      title={!hasEndpoints ? 'Ta trasa nie ma zapisanych punktów start/meta' : ''}
+                    >
+                      Pobierz GPX
+                    </a>
+                  </div>
+
+                  {/* Podgląd skrócony listy współrzędnych (opcjonalnie) */}
+                  {coords.length > 0 && (
+                    <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                      Pkt. na trasie: {coords.length}. (Podgląd mapy został wyłączony.)
+                    </div>
+                  )}
+                </div>
+              </div>
             </>
           ) : (
             <p>Wybierz trasę z listy.</p>
