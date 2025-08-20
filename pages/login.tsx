@@ -144,12 +144,6 @@ export default function Login() {
         >
           Zaloguj przez Google
         </button>
-        <button
-          onClick={() => signIn("facebook", { callbackUrl: safeCallbackUrl })}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
-        >
-          Zaloguj przez Facebook
-        </button>
       </div>
     </section>
   )

@@ -244,7 +244,6 @@ export default function RegisterPage() {
 
         <div className="mt-6 flex flex-col gap-2 text-center">
           <button onClick={() => signIn('google', { callbackUrl: '/' })} className="bg-red-600 text-white py-2 rounded hover:bg-red-700">Zaloguj się przez Google</button>
-          <button onClick={() => signIn('facebook', { callbackUrl: '/' })} className="bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Zaloguj się przez Facebook</button>
         </div>
       </main>
     </>
