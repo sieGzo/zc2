@@ -3,23 +3,22 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/router'
-import { useAuth } from '../hooks/useauth'
+import Router from 'next/router'            // ⬅️ zamiast router.events z useRouter
+import { useAuth } from '../hooks/useauth'  // ⬅️ poprawna wielkość liter
 import ThemeToggle from './ThemeToggle'
 import AccessPanel from './AccessPanel'
 import { Menu, X } from 'lucide-react'
 
 export default function Navbar() {
-  const router = useRouter()
   const { user, logout, loading } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const toggleMenu = () => setIsOpen(v => !v)
 
   useEffect(() => {
     const handleRoute = () => setIsOpen(false)
-    router.events.on('routeChangeStart', handleRoute)
-    return () => router.events.off('routeChangeStart', handleRoute)
-  }, [router.events])
+    Router.events.on('routeChangeStart', handleRoute)     // ⬅️
+    return () => Router.events.off('routeChangeStart', handleRoute)
+  }, [])
 
   useEffect(() => {
     const onResize = () => {
@@ -35,7 +34,7 @@ export default function Navbar() {
       <Link href="/blog" prefetch={false} className="hover:text-[#f1861e]" onClick={onClick}>Blog</Link>
       <Link href="/o-mnie" prefetch={false} className="hover:text-[#f1861e]" onClick={onClick}>O mnie</Link>
       <Link href="/kontakt" prefetch={false} className="hover:text-[#f1861e]" onClick={onClick}>Kontakt</Link>
-      <Link href="/szlaki" prefetch={false} className="hover:text-[#f1861e]" onClick={onClick}>Szlaki</Link>
+      <Link href="/trails" prefetch={false} className="hover:text-[#f1861e]" onClick={onClick}>Szlaki</Link> {/* ⬅️ patrz pkt 3 */}
     </>
   )
 
@@ -47,10 +46,7 @@ export default function Navbar() {
           <Link href="/profil" prefetch={false} className={`text-sm hover:underline ${mobile ? 'w-full text-center' : ''}`}>
             {(user as any).name || (user as any).username || 'Profil'}
           </Link>
-          <button
-            onClick={() => logout()}
-            className={`px-3 py-1 rounded bg-gray-800 text-white hover:bg-black ${mobile ? 'w-full' : ''}`}
-          >
+          <button onClick={() => logout()} className={`px-3 py-1 rounded bg-gray-800 text-white hover:bg-black ${mobile ? 'w-full' : ''}`}>
             Wyloguj
           </button>
         </div>
@@ -77,9 +73,7 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden xl:flex items-center gap-5">
-          <div className="flex items-center gap-5">
-            <NavLinks />
-          </div>
+          <div className="flex items-center gap-5"><NavLinks /></div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <AccessPanel />
@@ -87,22 +81,14 @@ export default function Navbar() {
           </div>
         </div>
 
-        <button
-          className="xl:hidden p-2"
-          onClick={toggleMenu}
-          aria-label="Menu"
-          aria-controls="mobile-nav"
-          aria-expanded={isOpen}
-        >
+        <button className="xl:hidden p-2" onClick={toggleMenu} aria-label="Menu" aria-controls="mobile-nav" aria-expanded={isOpen}>
           {isOpen ? <X /> : <Menu />}
         </button>
       </div>
 
       {isOpen && (
         <div id="mobile-nav" className="xl:hidden px-4 pb-4 border-t border-gray-200 dark:border-gray-800">
-          <div className="flex flex-col items-center gap-3 py-3">
-            <NavLinks onClick={() => setIsOpen(false)} />
-          </div>
+          <div className="flex flex-col items-center gap-3 py-3"><NavLinks onClick={() => setIsOpen(false)} /></div>
           <div className="flex flex-col items-center gap-3 py-3">
             <ThemeToggle />
             <AccessPanel />
