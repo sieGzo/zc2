@@ -44,7 +44,7 @@ export default function ContactSection() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Instagram"
-          className="no-contrast-icon no-contrast rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
+          className="no-contrast-icon no-contrast rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f1861e] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
         >
           <Instagram className="w-6 h-6 brand-ig" />
         </a>
@@ -54,7 +54,7 @@ export default function ContactSection() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="TikTok"
-          className="no-contrast-icon no-contrast rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
+          className="no-contrast-icon no-contrast rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f1861e] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
         >
           <SiTiktok className="w-6 h-6 brand-tt" />
         </a>
@@ -64,7 +64,7 @@ export default function ContactSection() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="YouTube"
-          className="no-contrast-icon no-contrast rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
+          className="no-contrast-icon no-contrast rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f1861e] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
         >
           <Youtube className="w-6 h-6 brand-yt" />
         </a>
@@ -74,7 +74,7 @@ export default function ContactSection() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Facebook"
-          className="no-contrast-icon no-contrast rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
+          className="no-contrast-icon no-contrast rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f1861e] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
         >
           <Facebook className="w-6 h-6 brand-fb" />
         </a>
@@ -87,13 +87,13 @@ export default function ContactSection() {
         transition={{ duration: 0.6, delay: 0.3 }}
         viewport={{ once: true }}
         href="mailto:kontakt@zwiedzajchytrze.pl"
-        className="inline-block px-6 py-3 mt-2 font-medium rounded-xl shadow hover:scale-105 transition text-white"
+        className="inline-block px-6 py-3 mt-2 font-medium rounded-xl shadow hover:scale-105 transition text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f1861e] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
         style={{ backgroundColor: '#f1861e' }}
       >
         Napisz maila&nbsp;✉️
       </motion.a>
 
-      {/* Zdjęcie */}
+      {/* Zdjęcie (budka telefoniczna) */}
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -103,7 +103,7 @@ export default function ContactSection() {
       >
         <Image
           src="/contact.JPG"
-          alt="Rafał z plecakiem"
+          alt="Czerwona budka telefoniczna – zdjęcie w sekcji kontakt"
           width={800}
           height={1066}
           className="w-full h-auto object-cover contrast-105 saturate-110"
