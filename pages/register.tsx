@@ -29,7 +29,7 @@ export default function RegisterPage() {
   const btnRef = useRef<HTMLButtonElement>(null)
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''
 
-  // prosta walidacja e-maila lokalnie (żeby nie walić 400 w API)
+  // walidacja e‑maila lokalnie
   useEffect(() => {
     if (!form.email) return
     setEmailError(emailRegex.test(form.email.trim().toLowerCase()) ? '' : 'Nieprawidłowy adres e-mail.')
@@ -59,7 +59,6 @@ export default function RegisterPage() {
       if (field === 'email') setEmailError(data.emailTaken ? 'Ten e-mail jest już zarejestrowany.' : '')
       if (field === 'username') setUsernameError(data.usernameTaken ? 'Nazwa użytkownika jest zajęta.' : '')
     } catch (err) {
-      // nie blokuj rejestracji, ale pokaż komunikat
       console.warn('check-availability error:', err)
     }
   }
@@ -98,6 +97,9 @@ export default function RegisterPage() {
           email: form.email.trim().toLowerCase(),
           password: form.password,
           turnstileToken,
+          // ⬇️ nowość: serwer zrobi kuloodporny zapis do newslettera
+          subscribe,
+          newsletterName: (nickname || form.username || form.email.split('@')[0]).trim(),
         }),
       })
 
@@ -105,19 +107,6 @@ export default function RegisterPage() {
 
       if (res.ok) {
         setSuccess(true)
-
-        // subskrypcja newslettera (best-effort)
-        if (subscribe) {
-          const name = (nickname || form.username || form.email.split('@')[0]).trim()
-          try {
-            await fetch('/api/newsletter/subscribe', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: form.email, name }),
-            })
-          } catch {}
-        }
-
         router.push('/potwierdz-email-wyslany')
         return
       }
@@ -126,10 +115,8 @@ export default function RegisterPage() {
       if (res.status === 409) {
         setMessage(typeof data?.message === 'string' ? data.message : 'E-mail lub nazwa użytkownika zajęta.')
       } else if (res.status === 400 && (data?.detail || data?.reason)) {
-        // Turnstile / walidacja – pokaż bardziej treściwy komunikat
         const d = (data?.detail && JSON.stringify(data.detail)) || data?.reason || data?.message
         setMessage(`Weryfikacja nie powiodła się. Spróbuj ponownie. ${d ? `\n(${d})` : ''}`)
-        // zresetuj widget dla pewności
         setWidgetKey((k) => k + 1)
         setTurnstileToken('')
       } else {
@@ -162,6 +149,7 @@ export default function RegisterPage() {
             className="p-2 border rounded bg-white dark:bg-gray-900 dark:text-white"
             required
             autoComplete="username"
+            disabled={loading}
           />
           {usernameError && <p className="text-sm text-red-500 -mt-2">{usernameError}</p>}
 
@@ -174,6 +162,7 @@ export default function RegisterPage() {
             className="p-2 border rounded bg-white dark:bg-gray-900 dark:text-white"
             required
             autoComplete="email"
+            disabled={loading}
           />
           {emailError && <p className="text-sm text-red-500 -mt-2">{emailError}</p>}
 
@@ -186,13 +175,19 @@ export default function RegisterPage() {
             required
             autoComplete="new-password"
             aria-describedby="password-requirements"
+            disabled={loading}
           />
           <small id="password-requirements" className="text-sm text-gray-500 dark:text-gray-400">
             Hasło: min. 8 znaków, wielka litera i znak specjalny.
           </small>
 
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={subscribe} onChange={e => setSubscribe(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={subscribe}
+              onChange={e => setSubscribe(e.target.checked)}
+              disabled={loading}
+            />
             Zapisz mnie do newslettera
           </label>
 
@@ -203,6 +198,7 @@ export default function RegisterPage() {
               value={nickname}
               onChange={e => setNickname(e.target.value)}
               className="p-2 border rounded bg-white dark:bg-gray-900 dark:text-white"
+              disabled={loading}
             />
           )}
 
