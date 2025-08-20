@@ -44,36 +44,39 @@ export default function ContactSection() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Instagram"
-          className="no-contrast-icon rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
+          className="no-contrast-icon no-contrast rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
         >
-          <Instagram className="w-6 h-6 text-pink-500 dark:text-pink-400" />
+          <Instagram className="w-6 h-6 brand-ig" />
         </a>
+
         <a
           href="https://www.tiktok.com/@zwiedzajchytrze"
           target="_blank"
           rel="noopener noreferrer"
           aria-label="TikTok"
-          className="no-contrast-icon rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
+          className="no-contrast-icon no-contrast rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
         >
-          <SiTiktok className="w-6 h-6 text-black dark:text-white" />
+          <SiTiktok className="w-6 h-6 brand-tt" />
         </a>
+
         <a
           href="https://www.youtube.com/@zwiedzajchytrze"
           target="_blank"
           rel="noopener noreferrer"
           aria-label="YouTube"
-          className="no-contrast-icon rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
+          className="no-contrast-icon no-contrast rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
         >
-          <Youtube className="w-6 h-6 text-red-600 dark:text-red-500" />
+          <Youtube className="w-6 h-6 brand-yt" />
         </a>
+
         <a
           href="https://www.facebook.com/profile.php?id=61578581730371"
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Facebook"
-          className="no-contrast-icon rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
+          className="no-contrast-icon no-contrast rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
         >
-          <Facebook className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          <Facebook className="w-6 h-6 brand-fb" />
         </a>
       </motion.div>
 

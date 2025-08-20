@@ -175,11 +175,11 @@ body.contrast svg {
   stroke: currentColor !important;
 }
 
-/* wyjątek: nie dotykaj ikon brandowych z klasą .no-contrast-icon */
-body.contrast .no-contrast-icon svg {
-  fill: inherit !important;
-  stroke: inherit !important;
-  color: inherit !important;
+/* Nie resetuj koloru/alfy wewnątrz .no-contrast-icon */
+body.contrast .no-contrast-icon,
+body.contrast .no-contrast-icon * {
+  opacity: initial !important;
+  --tw-text-opacity: initial !important;
 }
 
 /* Domyślnie wszystkie SVG w kontrast dostają currentColor jako stroke */
@@ -302,3 +302,27 @@ body.contrast .hero-title {
 }
 body.contrast .hero-title .text-zinc-400 { color: #fff !important; }
 body.contrast .hero-subtitle { color: #fff !important; opacity: 1 !important; }
+
+@layer utilities {
+  /* wyłącz globalne filtry/kontrast na wrapperze */
+  .no-contrast { filter: none !important; }
+
+  /* brandowe kolory ikon (z !important, żeby nie ruszał ich HC) */
+  .brand-ig { color: #E1306C !important; } /* Instagram */
+  .brand-yt { color: #FF0000 !important; } /* YouTube   */
+  .brand-fb { color: #1877F2 !important; } /* Facebook  */
+
+  /* TikTok: czarny w jasnym, biały w dark */
+  .brand-tt { color: #000000 !important; }
+  .dark .brand-tt { color: #FFFFFF !important; }
+}
+
+@layer utilities {
+  @keyframes bounce-slow {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  .animate-bounce-slow {
+    animation: bounce-slow 3s infinite;
+  }
+}
