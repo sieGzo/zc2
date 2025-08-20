@@ -54,62 +54,63 @@ export default function Home() {
       </Head>
 
       <main className="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-        {/* HERO */}
-        <section className="relative w-full px-4 md:px-8 pt-14 pb-10">
-          <div className="pointer-events-none absolute inset-x-0 -top-12 h-48 bg-gradient-to-b from-[#f1861e]/15 to-transparent dark:from-[#f1861e]/10" />
+      {/* HERO */}
+      <section className="relative w-full px-4 md:px-8 pt-14 pb-10">
+        <div className="pointer-events-none absolute inset-x-0 -top-12 h-48 bg-gradient-to-b from-[#f1861e]/15 to-transparent dark:from-[#f1861e]/10" />
 
-          <div className="relative max-w-4xl mx-auto text-center flex flex-col items-center gap-4">
-            {/* LOGO – delikatna animacja (wymaga .animate-bounce-slow w global.css) */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="relative"
-            >
-              <Image
-                src="/lisek-email.png"
-                alt=""
-                aria-hidden="true"
-                width={64}
-                height={64}
-                className="hidden sm:block absolute -right-8 -bottom-4 rotate-6 animate-bounce-slow"
-              />
-            </motion.div>
+        <div className="relative max-w-4xl mx-auto text-center flex flex-col items-center gap-4">
+          {/* Lisek ozdobny */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="relative"
+          >
+            <Image
+              src="/lisek-email.png"
+              alt="Lisek Zwiedzaj Chytrze"
+              width={80}
+              height={80}
+              className="animate-bounce-slow mx-auto"
+              priority
+            />
+          </motion.div>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.05 }}
-              className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight"
-            >
-              🦊 Zwiedzaj mądrze. Zwiedzaj chytrze.
-            </motion.h1>
+          <motion.h1
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.05 }}
+            className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight"
+          >
+            Zwiedzaj mądrze. Zwiedzaj chytrze.
+          </motion.h1>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight"
-            >
-              <span className="text-[#f1861e]">Planer tras</span>{' '}
-              <span className="text-gray-900 dark:text-white">+ blog podróżniczy</span>
-            </motion.h1>
+          <motion.h1
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight"
+          >
+            <span className="text-[#f1861e]">Planer tras</span>{' '}
+            <span className="text-gray-900 dark:text-white">+ blog podróżniczy</span>
+          </motion.h1>
 
-            <motion.div
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.15 }}
-              className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3"
-            >
-              <Link href="/trails" className="btn btn-primary rounded-full btn-md w-full sm:w-auto">
-                🚀 Otwórz planer trasy
-              </Link>
-              <Link href="/blog" className="btn btn-outline rounded-full btn-md w-full sm:w-auto">
-                📖 Przejdź do bloga
-              </Link>
-            </motion.div>
-          </div>
-        </section>
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+            className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3"
+          >
+            <Link href="/trails" className="btn btn-primary rounded-full btn-md w-full sm:w-auto">
+              🚀 Otwórz planer trasy
+            </Link>
+            <Link href="/blog" className="btn btn-outline rounded-full btn-md w-full sm:w-auto">
+              📖 Przejdź do bloga
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
 
         {/* Wideo intro */}
         <IntroVideo />
