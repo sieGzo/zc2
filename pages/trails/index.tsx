@@ -129,56 +129,65 @@ export default function TrailsPage() {
     return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_${engine}&route=${route}`;
   }
 
-  async function saveCurrentRoute() {
-    if (!route || !start || !end) return;
+async function saveCurrentRoute() {
+  if (!route || !start || !end) return;
 
-    const name = `${startLabel || "Start"} → ${endLabel || "Meta"} (${
-      mode === "walk" ? "piesza" : "rowerowa"
-    })`;
+  const name = `${startLabel || "Start"} → ${endLabel || "Meta"} (${mode === "walk" ? "piesza" : "rowerowa"})`;
 
-    const payload = {
-      name,
-      mode,
-      start,
-      end,
-      distance: distanceKm * 1000,
-      time: minutesTotal * 60,
-      geojson: route,
-    };
+  // rozbij współrzędne na pola pod DB
+  const payload = {
+    name,
+    mode, // "walk" | "bicycle"
+    distance: Math.round(distanceKm * 1000), // [m]
+    time: minutesTotal * 60,                 // [s]
+    geojson: route,
+    startLat: start[0],
+    startLon: start[1],
+    endLat: end[0],
+    endLon: end[1],
+  };
 
-    try {
-      const r = await fetch("/api/routes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+  try {
+    const r = await fetch("/api/routes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include", // ✨ upewnij się, że sesja idzie do API
+      body: JSON.stringify(payload),
+    });
+
+    // jeśli user nie zalogowany → fallback do localStorage
+    if (r.status === 401) {
+      const key = "zc_saved_routes";
+      const list: any[] = JSON.parse(localStorage.getItem(key) || "[]");
+      const id = Date.now();
+      // dla spójności z DB trzymajmy również rozbite pola (przyda się przy eksporcie GPX itp.)
+      list.unshift({
+        id,
+        name,
+        mode,
+        distance: payload.distance,
+        time: payload.time,
+        geojson: payload.geojson,
+        start: [payload.startLat, payload.startLon],
+        end: [payload.endLat, payload.endLon],
       });
-
-      if (r.status === 401) {
-        const key = "zc_saved_routes";
-        const list: any[] = JSON.parse(localStorage.getItem(key) || "[]");
-        const id = Date.now();
-        list.unshift({ id, ...payload });
-        localStorage.setItem(key, JSON.stringify(list));
-        window.location.href = "/trails/moje/moje";
-        return;
-      }
-
-      const data = await r.json().catch(() => ({}));
-
-      if (!r.ok) {
-        throw new Error(typeof data?.error === "string" ? data.error : "Nie udało się zapisać trasy");
-      }
-
-      const newId = data?.id as string | undefined;
-      if (newId) {
-        window.location.href = `/trails/${newId}`;
-      } else {
-        window.location.href = "/profil";
-      }
-    } catch (err: any) {
-      alert(err?.message || "Błąd zapisu trasy");
+      localStorage.setItem(key, JSON.stringify(list));
+      window.location.href = "/trails/moje/moje";
+      return;
     }
+
+    const data = await r.json().catch(() => ({}));
+
+    if (!r.ok) {
+      throw new Error(typeof data?.error === "string" ? data.error : "Nie udało się zapisać trasy");
+    }
+
+    const newId = data?.id as string | undefined;
+    window.location.href = newId ? `/trails/${newId}` : "/profil";
+  } catch (err: any) {
+    alert(err?.message || "Błąd zapisu trasy");
   }
+}
 
   const canOpenExternal = (startLabel && endLabel) || (start && end);
   const hasCoords = !!start && !!end;
