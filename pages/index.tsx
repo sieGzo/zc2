@@ -66,21 +66,13 @@ export default function Home() {
               transition={{ duration: 0.6 }}
               className="relative"
             >
-              <Image
-                src="/logo.svg"
-                alt="Zwiedzaj Chytrze – logo"
-                width={120}
-                height={120}
-                priority
-                className="animate-bounce-slow drop-shadow-md"
-              />
-              {/* Mały lisek jako akcent */}
+             
               <Image
                 src="/lisek-email.png"
                 alt=""
                 aria-hidden="true"
-                width={64}
-                height={64}
+                width={164}
+                height={164}
                 className="hidden sm:block absolute -right-8 -bottom-4 rotate-6 animate-bounce-slow"
               />
             </motion.div>
@@ -91,7 +83,7 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.05 }}
               className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight"
             >
-              🦊 Zwiedzaj mądrze. Zwiedzaj chytrze.
+               Zwiedzaj mądrze. Zwiedzaj chytrze.
             </motion.h1>
 
             <motion.h1
