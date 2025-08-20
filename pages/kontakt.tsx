@@ -44,7 +44,7 @@ export default function ContactSection() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Instagram"
-          className="rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
+          className="no-contrast-icon rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
         >
           <Instagram className="w-6 h-6 text-pink-500 dark:text-pink-400" />
         </a>
@@ -53,7 +53,7 @@ export default function ContactSection() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="TikTok"
-          className="rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
+          className="no-contrast-icon rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
         >
           <SiTiktok className="w-6 h-6 text-black dark:text-white" />
         </a>
@@ -62,7 +62,7 @@ export default function ContactSection() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="YouTube"
-          className="rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
+          className="no-contrast-icon rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
         >
           <Youtube className="w-6 h-6 text-red-600 dark:text-red-500" />
         </a>
@@ -71,7 +71,7 @@ export default function ContactSection() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Facebook"
-          className="rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
+          className="no-contrast-icon rounded-full bg-white/10 hover:bg-white/20 p-3 transition-all hover:scale-110 shadow"
         >
           <Facebook className="w-6 h-6 text-blue-600 dark:text-blue-400" />
         </a>

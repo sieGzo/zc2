@@ -12,7 +12,7 @@ export default function AboutSection() {
 
         {/* Blok 1 */}
         <div className="flex flex-col items-center gap-4 max-w-prose">
-          <Globe className="w-16 h-16 text-yellow-600" />
+          <Globe className="no-contrast-icon w-16 h-16 text-yellow-600" />
           <span>
             Odwiedziłem już <span className="text-yellow-600 font-semibold">13% świata</span>,
             czyli <strong>26&nbsp;z&nbsp;195 krajów</strong>. Byłem na <strong>4&nbsp;z&nbsp;7 kontynentów</strong> – w&nbsp;tym ponad miesiąc
@@ -22,7 +22,7 @@ export default function AboutSection() {
 
         {/* Blok 2 */}
         <div className="flex flex-col items-center gap-4 max-w-prose">
-          <Map className="text-blue-600 dark:text-blue-400 w-16 h-16" />
+          <Map className="no-contrast-icon text-blue-600 dark:text-blue-400 w-16 h-16" />
           <span>
             Zwiedzam <strong className="text-blue-600 dark:text-blue-400">budżetowo</strong>,
             szukam okazji podróżniczych, promocji lotniczych i&nbsp;noclegów w&nbsp;dobrych cenach. Podróżowanie nie musi być drogie — wystarczy trochę sprytu i&nbsp;dobrego planu.
@@ -32,7 +32,7 @@ export default function AboutSection() {
 
         {/* Blok 3 */}
         <div className="flex flex-col items-center gap-4 max-w-prose">
-          <Flag className="text-green-600 dark:text-green-400 w-16 h-16" />
+          <Flag className="no-contrast-icon text-green-600 dark:text-green-400 w-16 h-16" />
           <span>
             Mam na koncie <strong className="text-green-600 dark:text-green-400">45&nbsp;z&nbsp;50 stanów USA</strong>.
             Podróże po Ameryce nauczyły mnie, jak z&nbsp;mapą i&nbsp;plecakiem można naprawdę dużo zobaczyć, nie wydając fortuny. Fotografuję, testuję narzędzia do&nbsp;planowania tras i&nbsp;notuję wskazówki, które mogą się przydać innym miłośnikom podróży.
