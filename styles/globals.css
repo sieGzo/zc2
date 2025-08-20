@@ -187,13 +187,24 @@ body.contrast svg {
   color: currentColor !important;
 }
 
-/* Social w HC: wyraźna ramka i kolor */
+/* Social w HC: wyraźna ramka */
 body.contrast .contact-social a {
   background: transparent !important;
   border: 2px solid #ffeb3b !important;
-  color: #ffeb3b !important;
   box-shadow: none !important;
 }
+
+/* wyjątek: nie zmieniaj koloru brandowych ikon */
+body.contrast .contact-social a.no-contrast-icon {
+  color: inherit !important;
+}
+
+body.contrast .contact-social a.no-contrast-icon svg {
+  fill: inherit !important;
+  stroke: inherit !important;
+  color: inherit !important;
+}
+
 
 /* 🔧 RESET KRYCIA I ALFY TEKSTU */
 body.contrast :where(h1,h2,h3,h4,h5,h6,p,span,small,li,blockquote,figcaption,div,a,em,strong,label,time,code,pre,mark,dt,dd,button,input,select,textarea) {
