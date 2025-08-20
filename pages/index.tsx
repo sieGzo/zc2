@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import ScrollToTop from '@/components/ScrollToTop'
 import IntroVideo from '@/components/IntroVideo'
-import PromocjeLinii from '@/components/PromocjeLinii'
+import PromoGrid from '@/components/PromoGrid'   // ⬅️ NOWE
 
 export default function Home() {
   const title = 'Zwiedzaj Chytrze — planer tras i blog podróżniczy'
@@ -13,10 +13,11 @@ export default function Home() {
   const site = 'https://zwiedzajchytrze.pl'
   const ogImage = `${site}/og.jpg`
 
+  // 👇 pozycjonowanie zdjęć w kartach (1 i 2 wyżej)
   const blogCards = [
-    { tag: 'NORWEGIA', title: 'Lofoty bez tłumów', href: '/blog', img: '/lofoten.webp' },
-    { tag: 'USA',      title: 'Roadtrip przez parki', href: '/blog', img: '/usa.webp' },
-    { tag: 'ISLANDIA', title: 'Zorza, wodospady i mgła', href: '/blog', img: '/iceland.webp' },
+    { tag: 'NORWEGIA', title: 'Lofoty bez tłumów', href: '/blog', img: '/lofoten.webp', pos: 'object-[center_30%]' },
+    { tag: 'USA',      title: 'Roadtrip przez parki', href: '/blog', img: '/usa.webp',     pos: 'object-[center_20%]' },
+    { tag: 'ISLANDIA', title: 'Zorza, wodospady i mgła', href: '/blog', img: '/iceland.webp', pos: 'object-top' },
   ]
 
   const jsonLd = {
@@ -39,30 +40,22 @@ export default function Home() {
         <meta name="description" content={description} />
         <meta name="robots" content="index,follow" />
         <meta name="theme-color" content="#f1861e" />
-
-        {/* Open Graph */}
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
         <meta property="og:image" content={ogImage} />
         <meta property="og:url" content={site} />
         <meta property="og:type" content="website" />
-
-        {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={title} />
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={ogImage} />
-
-        {/* Structured data */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </Head>
 
       <main className="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200">
         {/* HERO */}
         <section className="relative w-full px-4 md:px-8 pt-14 pb-10">
-          {/* miękki akcent w tle */}
           <div className="pointer-events-none absolute inset-x-0 -top-12 h-48 bg-gradient-to-b from-[#f1861e]/15 to-transparent dark:from-[#f1861e]/10" />
-          
           <div className="relative max-w-4xl mx-auto text-center">
             <h1 className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight">
               🦊 Zwiedzaj mądrze. Zwiedzaj chytrze.
@@ -71,7 +64,6 @@ export default function Home() {
               <span className="text-[#f1861e]">Planer tras</span>{' '}
               <span className="text-gray-900 dark:text-white">+ blog podróżniczy</span>
             </h1>
-
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link href="/trails" className="btn btn-primary rounded-full btn-md w-full sm:w-auto">
                 🚀 Otwórz planer trasy
@@ -102,10 +94,9 @@ export default function Home() {
                       src={p.img}
                       alt={p.title}
                       fill
-                      className="object-cover object-top transition-transform duration-300 group-hover:scale-105"
+                      className={`object-cover ${p.pos} transition-transform duration-300 group-hover:scale-105`}
                       sizes="(max-width: 768px) 100vw, 33vw"
                     />
-                    {/* overlay na hover */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                   <div className="p-4">
@@ -125,10 +116,10 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Promocje linii lotniczych */}
+        {/* Promocje linii lotniczych / oferty */}
         <section className="max-w-6xl mx-auto px-4 my-14 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-6">✈️ Promocje linii lotniczych</h2>
-          <PromocjeLinii />
+          <h2 className="text-2xl md:text-3xl font-bold mb-6">✈️ Promocje i okazje</h2>
+          <PromoGrid /> {/* ⬅️ NOWE */}
         </section>
 
         <ScrollToTop />

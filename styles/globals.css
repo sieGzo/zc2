@@ -183,10 +183,18 @@ body.contrast svg {
 }
 
 /* 👇 Wyjątek dla ikon brandowych / kolorowych */
-body.contrast .no-contrast-icon svg {
+body.contrast .contact-social a.no-contrast-icon svg {
   fill: inherit !important;
   stroke: inherit !important;
   color: inherit !important;
+}
+
+/* Social w HC: wyraźna ramka i kolor, bez przygaszonego tła */
+body.contrast .contact-social a {
+  background: transparent !important;
+  border: 2px solid #ffeb3b !important;
+  color: #ffeb3b !important; /* dla lucide (stroke=currentColor) */
+  box-shadow: none !important;
 }
 
 /* 🔧 RESET KRYCIA I ALFY TEKSTU */

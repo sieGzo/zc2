@@ -37,7 +37,7 @@ export default function ContactSection() {
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.2 }}
         viewport={{ once: true }}
-        className="flex flex-wrap justify-center gap-6 text-xl"
+        className="contact-social flex flex-wrap justify-center gap-6 text-xl"
       >
         <a
           href="https://www.instagram.com/zwiedzajchytrze/"
@@ -100,7 +100,7 @@ export default function ContactSection() {
       >
         <Image
           src="/contact.JPG"
-          alt="Rafał z&nbsp;plecakiem"
+          alt="Rafał z plecakiem"
           width={800}
           height={1066}
           className="w-full h-auto object-cover contrast-105 saturate-110"
