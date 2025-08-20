@@ -11,7 +11,8 @@ module.exports = {
   ],
   darkMode: 'class',
   safelist: [
-    { pattern: /z-\[(?:2000|2100|2150)\]/ },
+    // z-index używane przez access panel i inne overlaye
+    { pattern: /z-\[(?:2000|2100|2150|9999)\]/ },
   ],
   theme: {
     extend: {
@@ -48,10 +49,10 @@ module.exports = {
   plugins: [
     require('@tailwindcss/forms'),
     plugin(function ({ addVariant, addComponents }) {
-      // wariant dostępności
+      // wariant dostępności (pozwala użyć klas typu contrast:bg-black)
       addVariant('contrast', 'body.contrast &')
 
-      // komponent .pill
+      // komponent .pill (używany też w HC)
       addComponents({
         '.pill': {
           '@apply rounded-full px-3 py-1.5 text-[12px] leading-none': {},

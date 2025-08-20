@@ -46,7 +46,7 @@
   }
 
   /* A11y toggles */
-  body.large-font  { font-size: 22px; }
+  html.large-font, body.large-font { font-size: 22px; }
   body.letter-spacing { letter-spacing: 0.075em; }
   body.font-alt { font-family: 'Arial Rounded MT Bold', 'Segoe UI', sans-serif !important; }
   body.line-spacing { line-height: 1.8 !important; }
