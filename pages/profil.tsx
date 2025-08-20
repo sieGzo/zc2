@@ -9,6 +9,10 @@ import { authOptions } from './api/auth/[...nextauth]'
 import { prisma } from '@/lib/prisma'
 import { useToast } from '@/components/Toaster'
 
+// 🎨 ikony i animacje
+import { Bike, Footprints, Timer, Route as RouteIcon, MapPin, Apple, Map } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+
 type DbRoute = {
   id: string
   name: string
@@ -81,6 +85,11 @@ function buildGpxHref(r: DbRoute) {
   return `/api/routes/${r.id}/gpx`
 }
 
+// drobny komponent ikony trybu
+function ModeIcon({ mode, className = 'w-4 h-4' }: { mode?: string; className?: string }) {
+  return mode === 'walk' ? <Footprints className={className} aria-hidden /> : <Bike className={className} aria-hidden />
+}
+
 export default function Profil({ user, routes }: Props) {
   const toast = useToast()
   const [activeId, setActiveId] = useState<string | null>(routes[0]?.id ?? null)
@@ -121,7 +130,7 @@ export default function Profil({ user, routes }: Props) {
     <main className="max-w-6xl mx-auto p-4 sm:p-6 overflow-x-hidden">
       <Head><title>Twój profil — Zwiedzaj Chytrze</title></Head>
 
-      {/* HEADER: na mobile pionowo, od sm obok siebie; wrap gdy brakuje miejsca */}
+      {/* HEADER */}
       <header className="mb-5 sm:mb-6">
         <div className="flex flex-col gap-2 min-w-0">
           <h1 className="text-2xl md:text-3xl font-extrabold leading-tight break-words">
@@ -159,9 +168,19 @@ export default function Profil({ user, routes }: Props) {
                     onClick={() => setActiveId(r.id)}
                     aria-current={isActive ? 'true' : 'false'}
                   >
-                    <div className="font-medium truncate break-words">{r.name}</div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
-                      {km} · {modeLabel(r.mode)}{r.time ? ` · ${dur}` : ''}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <ModeIcon mode={r.mode} />
+                      <span className="font-medium truncate break-words">{r.name}</span>
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                      <span className="inline-flex items-center gap-1"><RouteIcon className="w-3.5 h-3.5" />{km}</span>
+                      {r.time ? (
+                        <span className="inline-flex items-center gap-1"><Timer className="w-3.5 h-3.5" />{dur}</span>
+                      ) : null}
+                      <span className="inline-flex items-center gap-1">
+                        {r.mode === 'walk' ? <Footprints className="w-3.5 h-3.5" /> : <Bike className="w-3.5 h-3.5" />}
+                        {modeLabel(r.mode)}
+                      </span>
                     </div>
                   </button>
                   <div className="flex gap-2 mt-2">
@@ -182,67 +201,89 @@ export default function Profil({ user, routes }: Props) {
 
         {/* PANEL TRASY */}
         <section className="md:col-span-2 min-w-0">
-          {active ? (
-            <>
-              <div className="mb-3 min-w-0">
-                <div className="text-lg md:text-xl font-semibold break-words">{active.name}</div>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  <span className="pill">{formatKm(active.distance)}</span>
-                  <span className="pill">{formatDuration(active.time)}</span>
-                  <span className="pill">{modeLabel(active.mode)}</span>
+          <AnimatePresence mode="wait">
+            {active ? (
+              <motion.div
+                key={active.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+                className="min-w-0"
+              >
+                <div className="mb-3 min-w-0">
+                  <div className="text-lg md:text-xl font-semibold break-words">{active.name}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <span className="pill inline-flex items-center gap-1">
+                      <RouteIcon className="w-4 h-4" /> {formatKm(active.distance)}
+                    </span>
+                    <span className="pill inline-flex items-center gap-1">
+                      <Timer className="w-4 h-4" /> {formatDuration(active.time)}
+                    </span>
+                    <span className="pill inline-flex items-center gap-1">
+                      <ModeIcon mode={active.mode} className="w-4 h-4" /> {modeLabel(active.mode)}
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              <div className="card">
-                <div className="card-body">
-                  <div className="flex flex-wrap items-center gap-3">
-                    {hasEndpoints ? (
-                      <a href={buildGoogleLink(active)} target="_blank" rel="noreferrer" className="btn btn-outline">
-                        Otwórz w Google Maps
-                      </a>
-                    ) : (
-                      <button className="btn btn-outline" disabled>Otwórz w Google Maps</button>
-                    )}
-
-                    {/* Apple tylko piesza */}
-                    {active.mode === 'walk' ? (
-                      hasEndpoints ? (
-                        <a href={buildAppleLink(active)} target="_blank" rel="noreferrer" className="btn btn-ghost">
-                          Otwórz w Apple Maps
+                <div className="card">
+                  <div className="card-body">
+                    <div className="flex flex-wrap items-center gap-3">
+                      {hasEndpoints ? (
+                        <a href={buildGoogleLink(active)} target="_blank" rel="noreferrer" className="btn btn-outline">
+                          <Map className="w-4 h-4" /> Otwórz w Google Maps
                         </a>
                       ) : (
-                        <button className="btn btn-ghost" disabled>Otwórz w Apple Maps</button>
-                      )
-                    ) : null}
+                        <button className="btn btn-outline" disabled><Map className="w-4 h-4" /> Otwórz w Google Maps</button>
+                      )}
 
-                    {hasEndpoints ? (
-                      <>
-                        <a href={buildOsmLink(active)} target="_blank" rel="noreferrer" className="btn btn-ghost">
-                          Otwórz w OSM
-                        </a>
-                        <a href={buildGpxHref(active)} target="_blank" rel="noreferrer" className="btn btn-ghost">
-                          Pobierz GPX
-                        </a>
-                      </>
-                    ) : (
-                      <>
-                        <button className="btn btn-ghost" disabled>Otwórz w OSM</button>
-                        <button className="btn btn-ghost" disabled>Pobierz GPX</button>
-                      </>
+                      {/* Apple tylko piesza */}
+                      {active.mode === 'walk' ? (
+                        hasEndpoints ? (
+                          <a href={buildAppleLink(active)} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                            <Apple className="w-4 h-4" /> Otwórz w Apple Maps
+                          </a>
+                        ) : (
+                          <button className="btn btn-ghost" disabled><Apple className="w-4 h-4" /> Otwórz w Apple Maps</button>
+                        )
+                      ) : null}
+
+                      {hasEndpoints ? (
+                        <>
+                          <a href={buildOsmLink(active)} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                            <MapPin className="w-4 h-4" /> Otwórz w OSM
+                          </a>
+                          <a href={buildGpxHref(active)} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                            ⤓ Pobierz GPX
+                          </a>
+                        </>
+                      ) : (
+                        <>
+                          <button className="btn btn-ghost" disabled><MapPin className="w-4 h-4" /> Otwórz w OSM</button>
+                          <button className="btn btn-ghost" disabled>⤓ Pobierz GPX</button>
+                        </>
+                      )}
+                    </div>
+
+                    {coords.length > 0 && (
+                      <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                        Pkt. na trasie: {coords.length}. (Podgląd mapy został wyłączony.)
+                      </p>
                     )}
                   </div>
-
-                  {coords.length > 0 && (
-                    <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                      Pkt. na trasie: {coords.length}. (Podgląd mapy został wyłączony.)
-                    </p>
-                  )}
                 </div>
-              </div>
-            </>
-          ) : (
-            <p>Wybierz trasę z listy.</p>
-          )}
+              </motion.div>
+            ) : (
+              <motion.p
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-gray-600 dark:text-gray-400"
+              >
+                Wybierz trasę z listy.
+              </motion.p>
+            )}
+          </AnimatePresence>
         </section>
       </div>
     </main>

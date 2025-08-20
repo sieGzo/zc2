@@ -93,64 +93,78 @@ export default function MyTrailsPage() {
   const hasEndpoints = active?.start && active?.end
 
   return (
-    <main className="max-w-6xl mx-auto p-6">
+    <main className="max-w-6xl mx-auto p-4 sm:p-6 overflow-x-hidden">
       <Head><title>Moje trasy — Zwiedzaj Chytrze</title></Head>
-      <h1 className="text-3xl font-bold mb-4">Moje trasy</h1>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        <aside className="md:col-span-1">
+      <h1 className="text-2xl md:text-3xl font-extrabold mb-4 break-words">
+        Moje trasy
+      </h1>
+
+      <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
+        {/* LISTA TRAS */}
+        <aside className="md:col-span-1 min-w-0">
           <ul className="space-y-2">
             {items.map(i => {
               const km = formatKm(i.distance)
               const dur = formatDuration(i.time)
-              const activeCls = active?.id === i.id ? "bg-orange-50 border-orange-200" : "bg-white"
+              const activeCls = active?.id === i.id
+                ? "bg-orange-50 border-orange-200 dark:bg-gray-800/60"
+                : "bg-white dark:bg-gray-800"
               return (
-                <li key={i.id} className={`p-3 border rounded ${activeCls} dark:bg-gray-800 dark:border-gray-700`}>
-                  <button className="text-left w-full" onClick={() => setActive(i)}>
-                    <div className="font-medium truncate">{i.name}</div>
+                <li key={i.id} className={`p-3 border rounded ${activeCls} dark:border-gray-700 min-w-0`}>
+                  <button className="text-left w-full block min-w-0" onClick={() => setActive(i)}>
+                    <div className="font-medium truncate break-words">{i.name}</div>
                     <div className="text-xs text-gray-600 dark:text-gray-400">
-                      {km} · {i.mode} {i.time ? `· ${dur}` : ""}
+                      {km} · {i.mode}{i.time ? ` · ${dur}` : ""}
                     </div>
                   </button>
-                  <div className="flex gap-3 mt-2 text-sm">
-                    <a className="text-[#f1861e] hover:underline" href="/trails">Otwórz w planerze</a>
-                    <button className="text-red-600 hover:underline" onClick={() => remove(i.id)}>Usuń</button>
+                  <div className="flex gap-2 mt-2">
+                    <a className="btn btn-sm btn-ghost" href="/trails">Otwórz w planerze</a>
+                    <button className="btn btn-sm btn-ghost text-red-600" onClick={() => remove(i.id)}>Usuń</button>
                   </div>
                 </li>
               )
             })}
-            {items.length === 0 && <li className="text-gray-500 dark:text-gray-400">Brak zapisanych tras.</li>}
+            {items.length === 0 && (
+              <li className="text-gray-500 dark:text-gray-400 text-sm">
+                Brak zapisanych tras.
+              </li>
+            )}
           </ul>
         </aside>
 
-        <section className="md:col-span-2">
+        {/* PANEL TRASY */}
+        <section className="md:col-span-2 min-w-0">
           {active ? (
             <>
-              <div className="mb-3">
-                <div className="text-lg font-semibold">{active.name}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  {formatKm(active.distance)} · {formatDuration(active.time)} · {active.mode}
+              <div className="mb-3 min-w-0">
+                <div className="text-lg md:text-xl font-semibold break-words">{active.name}</div>
+                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <span className="pill">{formatKm(active.distance)}</span>
+                  <span className="pill">{formatDuration(active.time)}</span>
+                  <span className="pill">{active.mode}</span>
                 </div>
               </div>
 
               <div className="card">
                 <div className="card-body">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                    Akcje dla wybranej trasy:
-                  </p>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     {hasEndpoints ? (
                       <a href={buildGoogleLink(active)} target="_blank" rel="noreferrer" className="btn btn-outline">
                         Otwórz w Google Maps
                       </a>
-                    ) : <button className="btn btn-outline" disabled>Otwórz w Google Maps</button>}
+                    ) : (
+                      <button className="btn btn-outline" disabled>Otwórz w Google Maps</button>
+                    )}
 
                     {active.mode === "walk" && (
                       hasEndpoints ? (
                         <a href={buildAppleLink(active)} target="_blank" rel="noreferrer" className="btn btn-ghost">
                           Otwórz w Apple Maps
                         </a>
-                      ) : <button className="btn btn-ghost" disabled>Otwórz w Apple Maps</button>
+                      ) : (
+                        <button className="btn btn-ghost" disabled>Otwórz w Apple Maps</button>
+                      )
                     )}
 
                     {hasEndpoints ? (
@@ -171,9 +185,9 @@ export default function MyTrailsPage() {
                   </div>
 
                   {coords.length > 0 && (
-                    <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                    <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
                       Pkt. na trasie: {coords.length}. (Podgląd mapy został wyłączony.)
-                    </div>
+                    </p>
                   )}
                 </div>
               </div>

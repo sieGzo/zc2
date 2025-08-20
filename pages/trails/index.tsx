@@ -70,9 +70,7 @@ export default function TrailsPage() {
     const e = await geocodeIfNeeded(endLabel, end);
 
     if (!s || !e) {
-      setError(
-        "Ustaw oba punkty trasy (wybierz z listy lub wpisz i naciśnij Enter)."
-      );
+      setError("Ustaw oba punkty trasy (wybierz z listy lub wpisz i naciśnij Enter).");
       return;
     }
 
@@ -120,7 +118,6 @@ export default function TrailsPage() {
   function appleLink() {
     const s = startLabel || (start ? `${start[0]},${start[1]}` : "");
     const e = endLabel || (end ? `${end[0]},${end[1]}` : "");
-    // dirflg: w = walking, d = driving; dla nas tylko walking
     const q = new URLSearchParams({ saddr: s, daddr: e, dirflg: "w" });
     return `http://maps.apple.com/?${q.toString()}`;
   }
@@ -133,62 +130,57 @@ export default function TrailsPage() {
   }
 
   async function saveCurrentRoute() {
-  if (!route || !start || !end) return;
+    if (!route || !start || !end) return;
 
-  const name = `${startLabel || "Start"} → ${endLabel || "Meta"} (${
-    mode === "walk" ? "piesza" : "rowerowa"
-  })`;
+    const name = `${startLabel || "Start"} → ${endLabel || "Meta"} (${
+      mode === "walk" ? "piesza" : "rowerowa"
+    })`;
 
-  // przygotuj payload raz – przyda się też do localStorage
-  const payload = {
-    name,
-    mode,
-    start,
-    end,
-    distance: distanceKm * 1000, // m
-    time: minutesTotal * 60,     // s
-    geojson: route,
-  };
+    const payload = {
+      name,
+      mode,
+      start,
+      end,
+      distance: distanceKm * 1000,
+      time: minutesTotal * 60,
+      geojson: route,
+    };
 
-  try {
-    const r = await fetch("/api/routes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const r = await fetch("/api/routes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    // 🔒 NIEZALOGOWANY → fallback do localStorage + redirect do "moje"
-    if (r.status === 401) {
-      const key = "zc_saved_routes";
-      const list: any[] = JSON.parse(localStorage.getItem(key) || "[]");
-      // proste ID z timestampu – nie koliduje z DB id (string vs number)
-      const id = Date.now();
-      list.unshift({ id, ...payload });
-      localStorage.setItem(key, JSON.stringify(list));
-      // przejrzysty redirect do wersji localStorage
-      window.location.href = "/trails/moje/moje";
-      return;
+      if (r.status === 401) {
+        const key = "zc_saved_routes";
+        const list: any[] = JSON.parse(localStorage.getItem(key) || "[]");
+        const id = Date.now();
+        list.unshift({ id, ...payload });
+        localStorage.setItem(key, JSON.stringify(list));
+        window.location.href = "/trails/moje/moje";
+        return;
+      }
+
+      const data = await r.json().catch(() => ({}));
+
+      if (!r.ok) {
+        throw new Error(typeof data?.error === "string" ? data.error : "Nie udało się zapisać trasy");
+      }
+
+      const newId = data?.id as string | undefined;
+      if (newId) {
+        window.location.href = `/trails/${newId}`;
+      } else {
+        window.location.href = "/profil";
+      }
+    } catch (err: any) {
+      alert(err?.message || "Błąd zapisu trasy");
     }
-
-    const data = await r.json().catch(() => ({}));
-
-    if (!r.ok) {
-      throw new Error(typeof data?.error === "string" ? data.error : "Nie udało się zapisać trasy");
-    }
-
-    // ✅ ZALOGOWANY → jeśli API zwróci id, idź do szczegółu; w przeciwnym razie do profilu
-    const newId = data?.id as string | undefined;
-    if (newId) {
-      window.location.href = `/trails/${newId}`;
-    } else {
-      window.location.href = "/profil";
-    }
-  } catch (err: any) {
-    alert(err?.message || "Błąd zapisu trasy");
   }
-}
 
-  const canOpenExternal = (startLabel && endLabel) || (start && end); // tekst albo współrzędne
+  const canOpenExternal = (startLabel && endLabel) || (start && end);
   const hasCoords = !!start && !!end;
 
   return (
@@ -198,14 +190,16 @@ export default function TrailsPage() {
       </Head>
 
       <header className="mb-5">
-        <h1 className="text-3xl font-extrabold tracking-tight">Planer trasy</h1>
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight break-words">
+          Planer trasy
+        </h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
           Wybierz punkty, zaplanuj trasę i otwórz w ulubionej nawigacji albo pobierz GPX.
         </p>
       </header>
 
-      {/* Sekcja wyboru punktów */}
-      <div className="grid sm:grid-cols-2 gap-4 mb-4">
+      {/* Punkty start/meta */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <GeoAutocomplete
           label="Punkt startowy"
           value={startLabel}
@@ -226,20 +220,18 @@ export default function TrailsPage() {
         />
       </div>
 
-      {/* Tryb: przełącznik przyciskowy */}
-      <div className="flex items-center gap-3 mb-3">
+      {/* Tryb + przycisk planowania */}
+      <div className="flex flex-wrap items-center gap-3 mb-3">
         <div className="inline-flex rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
           <button
-            className={`btn btn-md ${mode === "walk" ? "btn-primary" : "btn-ghost"}`}
+            className={`btn btn-sm sm:btn-md ${mode === "walk" ? "btn-primary" : "btn-ghost"}`}
             onClick={() => setMode("walk")}
-            aria-pressed={mode === "walk"}
           >
             Piesza
           </button>
           <button
-            className={`btn btn-md ${mode === "bicycle" ? "btn-primary" : "btn-ghost"}`}
+            className={`btn btn-sm sm:btn-md ${mode === "bicycle" ? "btn-primary" : "btn-ghost"}`}
             onClick={() => setMode("bicycle")}
-            aria-pressed={mode === "bicycle"}
           >
             Rowerowa
           </button>
@@ -251,7 +243,8 @@ export default function TrailsPage() {
       </div>
 
       <p className="mb-2 text-sm text-gray-600 dark:text-gray-400">
-        Podpowiedź: możesz wpisać nazwę i wcisnąć <kbd className="px-1 py-0.5 border rounded">Enter</kbd>, albo wybrać z listy.
+        Podpowiedź: możesz wpisać nazwę i wcisnąć{" "}
+        <kbd className="px-1 py-0.5 border rounded">Enter</kbd>, albo wybrać z listy.
       </p>
 
       {loading && <p className="mt-3">Liczenie trasy…</p>}
@@ -260,10 +253,14 @@ export default function TrailsPage() {
       {route && (
         <div className="card mt-4 card-hover">
           <div className="card-body space-y-4">
-            {/* Podsumowanie trasy */}
+            {/* Podsumowanie */}
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="pill"><strong className="mr-1">Dystans:</strong> {distanceKm.toFixed(1)} km</span>
-              <span className="pill"><strong className="mr-1">Czas:</strong> {formatDuration(minutesTotal)}</span>
+              <span className="pill">
+                <strong className="mr-1">Dystans:</strong> {distanceKm.toFixed(1)} km
+              </span>
+              <span className="pill">
+                <strong className="mr-1">Czas:</strong> {formatDuration(minutesTotal)}
+              </span>
               <span className="pill">{mode === "walk" ? "Piesza" : "Rowerowa"}</span>
               <button onClick={saveCurrentRoute} className="ml-auto btn btn-primary">
                 Zapisz trasę
@@ -273,12 +270,7 @@ export default function TrailsPage() {
             {/* Akcje nawigacyjne */}
             <div className="flex flex-wrap items-center gap-3">
               {canOpenExternal ? (
-                <a
-                  href={googleLink()}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn btn-outline"
-                >
+                <a href={googleLink()} target="_blank" rel="noreferrer" className="btn btn-outline">
                   Otwórz w Google Maps
                 </a>
               ) : (
@@ -287,15 +279,9 @@ export default function TrailsPage() {
                 </button>
               )}
 
-              {/* Apple Maps TYLKO dla pieszej */}
               {mode === "walk" && (
                 canOpenExternal ? (
-                  <a
-                    href={appleLink()}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn btn-ghost"
-                  >
+                  <a href={appleLink()} target="_blank" rel="noreferrer" className="btn btn-ghost">
                     Otwórz w Apple Maps
                   </a>
                 ) : (
@@ -307,13 +293,7 @@ export default function TrailsPage() {
 
               {hasCoords ? (
                 <>
-                  <a
-                    href={osmLink()}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn btn-ghost"
-                    title=""
-                  >
+                  <a href={osmLink()} target="_blank" rel="noreferrer" className="btn btn-ghost">
                     Otwórz w OSM
                   </a>
                   <a
