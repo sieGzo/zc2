@@ -176,6 +176,19 @@ body.contrast .no-contrast-icon svg {
   color: inherit !important;
 }
 
+/* Domyślnie wszystkie SVG w kontrast dostają currentColor */
+body.contrast svg {
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+/* 👇 Wyjątek dla ikon brandowych / kolorowych */
+body.contrast .no-contrast-icon svg {
+  fill: inherit !important;
+  stroke: inherit !important;
+  color: inherit !important;
+}
+
 /* 🔧 RESET KRYCIA I ALFY TEKSTU */
 body.contrast :where(h1,h2,h3,h4,h5,h6,p,span,small,li,blockquote,figcaption,div,a,em,strong,label,time,code,pre,mark,dt,dd,button,input,select,textarea) {
   --tw-text-opacity: 1 !important;
