@@ -13,7 +13,7 @@ export default function PolitykaPrywatnosci() {
           Dbamy o Twoją prywatność. Niniejszy dokument wyjaśnia, jakie dane przetwarzamy i w jakim celu.
         </p>
         <h2 className="mt-8 text-xl font-semibold">Administrator</h2>
-        <p>Administratorem danych jest właściciel serwisu ZwiedzajChytrze (kontakt: hello@przyklad.pl).</p>
+        <p>Administratorem danych jest właściciel serwisu ZwiedzajChytrze (kontakt: kontakt@zwiedzajchytrze.pl).</p>
 
         <h2 className="mt-6 text-xl font-semibold">Zakres danych</h2>
         <p>Adres e‑mail podany w formularzu newslettera oraz dane techniczne standardowo przetwarzane przez narzędzia analityczne.</p>
@@ -25,7 +25,7 @@ export default function PolitykaPrywatnosci() {
         </ul>
 
         <h2 className="mt-6 text-xl font-semibold">Odbiorcy danych</h2>
-        <p>Dostawcy usług: system newslettera (np. Buttondown/Brevo), hosting (np. Vercel), analityka (np. Plausible/GA4).</p>
+        <p>Dostawcy usług: system newslettera (/Brevo), hosting (np. Vercel), analityka (Google Analytics).</p>
 
         <h2 className="mt-6 text-xl font-semibold">Okres przetwarzania</h2>
         <p>Do czasu wycofania zgody lub wniesienia sprzeciwu – a w przypadku statystyk: zgodnie z polityką dostawców.</p>
@@ -37,7 +37,7 @@ export default function PolitykaPrywatnosci() {
         <p>Używamy wyłącznie niezbędnych cookies oraz narzędzi statystycznych. Szczegóły w ustawieniach przeglądarki.</p>
 
         <h2 className="mt-6 text-xl font-semibold">Kontakt</h2>
-        <p>W sprawach prywatności: hello@przyklad.pl</p>
+        <p>W sprawach prywatności: kontakt@zwiedzajchytrze.pl</p>
       </main>
     </>
   );
