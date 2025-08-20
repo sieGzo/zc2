@@ -7,17 +7,11 @@ import IntroVideo from '@/components/IntroVideo'
 import PromocjeLinii from '@/components/PromocjeLinii'
 
 export default function Home() {
-  const title = 'Zwiedzaj Chytrze — szlaki i blog podróżniczy'
+  const title = 'Zwiedzaj Chytrze — planer tras i blog podróżniczy'
   const description =
     'Planer tras pieszych i rowerowych + blog podróżniczy. Zapisuj trasy, inspiruj się i zwiedzaj… chytrze!'
   const site = 'https://zwiedzajchytrze.pl'
   const ogImage = `${site}/og.jpg`
-
-  const features = [
-    { icon: '🚶‍♀️', title: 'Szlaki piesze', text: 'Od krótkich spacerów po dłuższe wędrówki.' },
-    { icon: '⛰️',   title: 'Górskie',       text: 'Piękne i bezpieczne trasy z podpowiedziami.' },
-    { icon: '🚴',   title: 'Rowerowe',      text: 'Przygody w Polsce i Europie, z GPX.' },
-  ]
 
   const blogCards = [
     { tag: 'NORWEGIA', title: 'Lofoty bez tłumów', href: '/blog', img: '/lofoten.webp' },
@@ -69,16 +63,14 @@ export default function Home() {
           {/* miękki akcent w tle */}
           <div className="pointer-events-none absolute inset-x-0 -top-12 h-48 bg-gradient-to-b from-[#f1861e]/15 to-transparent dark:from-[#f1861e]/10" />
           <div className="relative max-w-6xl mx-auto grid md:grid-cols-2 gap-8 items-center">
-            {/* Copy */}
             <div>
               <h1 className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight">
-                🦊 Zwiedzaj mądrze. Zwiedzaj chytrze.</h1>
-              
+                🦊 Zwiedzaj mądrze. Zwiedzaj chytrze.
+              </h1>
               <h1 className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight">
                 <span className="text-[#f1861e]">Planer tras</span>{' '}
                 <span className="text-gray-900 dark:text-white">+ blog podróżniczy</span>
               </h1>
-        
 
               <div className="mt-8 flex flex-col sm:flex-row items-center gap-3">
                 <Link href="/trails" className="btn btn-primary rounded-full btn-md w-full sm:w-auto">
@@ -88,33 +80,12 @@ export default function Home() {
                   📖 Przejdź do bloga
                 </Link>
               </div>
-          </div>
+            </div>
           </div>
         </section>
 
-        {/* Wideo (krótkie intro) */}
+        {/* Wideo intro */}
         <IntroVideo />
-
-        {/* Sekcja: Szlaki i trasy */}
-        <section className="max-w-6xl mx-auto px-4 my-14 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-6">🗺️ Szlaki i trasy</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 justify-items-center">
-            {features.map((c) => (
-              <Link
-                key={c.title}
-                href="/trails"
-                className="card card-hover w-full max-w-sm text-left"
-              >
-                <div className="card-body">
-                  <div className="text-2xl">{c.icon}</div>
-                  <h3 className="mt-2 text-lg font-semibold">{c.title}</h3>
-                  <p className="mt-1 text-gray-600 dark:text-gray-300">{c.text}</p>
-                  <span className="mt-3 inline-block text-[#f1861e] font-medium">Otwórz planer →</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
 
         {/* Blog – 3 karty */}
         <section className="bg-orange-50 dark:bg-gray-800 py-14">
