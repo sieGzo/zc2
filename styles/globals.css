@@ -170,30 +170,28 @@ body.contrast .dark\:text-gray-400 {
   color: #fff !important;
 }
 
+/* SVG default w kontrastowym: zostaw stroke, nie wymuszaj fill */
+body.contrast svg {
+  stroke: currentColor !important;
+}
+
+/* wyjątek: nie dotykaj ikon brandowych z klasą .no-contrast-icon */
 body.contrast .no-contrast-icon svg {
   fill: inherit !important;
   stroke: inherit !important;
   color: inherit !important;
 }
 
-/* Domyślnie wszystkie SVG w kontrast dostają currentColor */
+/* Domyślnie wszystkie SVG w kontrast dostają currentColor jako stroke */
 body.contrast svg {
-  fill: currentColor !important;
-  stroke: currentColor !important;
+  color: currentColor !important;
 }
 
-/* 👇 Wyjątek dla ikon brandowych / kolorowych */
-body.contrast .contact-social a.no-contrast-icon svg {
-  fill: inherit !important;
-  stroke: inherit !important;
-  color: inherit !important;
-}
-
-/* Social w HC: wyraźna ramka i kolor, bez przygaszonego tła */
+/* Social w HC: wyraźna ramka i kolor */
 body.contrast .contact-social a {
   background: transparent !important;
   border: 2px solid #ffeb3b !important;
-  color: #ffeb3b !important; /* dla lucide (stroke=currentColor) */
+  color: #ffeb3b !important;
   box-shadow: none !important;
 }
 
@@ -236,7 +234,6 @@ body.contrast article {
 body.contrast img,
 body.contrast video,
 body.contrast picture,
-body.contrast svg,
 body.contrast canvas { filter: none !important; }
 
 /* formularze */
@@ -294,6 +291,3 @@ body.contrast .hero-title {
 }
 body.contrast .hero-title .text-zinc-400 { color: #fff !important; }
 body.contrast .hero-subtitle { color: #fff !important; opacity: 1 !important; }
-
-/* Ikony SVG – dopasuj do koloru tekstu */
-body.contrast svg { fill: currentColor !important; stroke: currentColor !important; }
