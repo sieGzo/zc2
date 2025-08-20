@@ -8,10 +8,9 @@ import { signOut } from 'next-auth/react'
 import { authOptions } from './api/auth/[...nextauth]'
 import { prisma } from '@/lib/prisma'
 import { useToast } from '@/components/Toaster'
-
-// 🎨 ikony i animacje
 import { Bike, Footprints, Timer, Route as RouteIcon, MapPin, Apple, Map } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { mobileAppleLink, mobileGoogleLink } from '@/lib/mobileLinks'
 
 type DbRoute = {
   id: string
@@ -61,19 +60,16 @@ function formatDuration(seconds?: number | null) {
   return m ? `${h} h ${m} min` : `${h} h`
 }
 
-// Linki
-function buildGoogleLink(r: DbRoute) {
+function buildGoogleDeep(r: DbRoute) {
   const travelmode = r.mode === 'walk' ? 'walking' : 'bicycling'
   const s = r.startLat != null && r.startLon != null ? `${r.startLat},${r.startLon}` : ''
   const e = r.endLat != null && r.endLon != null ? `${r.endLat},${r.endLon}` : ''
-  const q = new URLSearchParams({ api: '1', origin: s, destination: e, travelmode })
-  return `https://www.google.com/maps/dir/?${q.toString()}`
+  return mobileGoogleLink(s, e, travelmode)
 }
-function buildAppleLink(r: DbRoute) {
+function buildAppleDeep(r: DbRoute) {
   const s = r.startLat != null && r.startLon != null ? `${r.startLat},${r.startLon}` : ''
   const e = r.endLat != null && r.endLon != null ? `${r.endLat},${r.endLon}` : ''
-  const q = new URLSearchParams({ saddr: s, daddr: e, dirflg: 'w' }) // tylko piesza
-  return `http://maps.apple.com/?${q.toString()}`
+  return mobileAppleLink(s, e, true)
 }
 function buildOsmLink(r: DbRoute) {
   if (r.startLat == null || r.startLon == null || r.endLat == null || r.endLon == null) return '#'
@@ -85,7 +81,6 @@ function buildGpxHref(r: DbRoute) {
   return `/api/routes/${r.id}/gpx`
 }
 
-// drobny komponent ikony trybu
 function ModeIcon({ mode, className = 'w-4 h-4' }: { mode?: string; className?: string }) {
   return mode === 'walk' ? <Footprints className={className} aria-hidden /> : <Bike className={className} aria-hidden />
 }
@@ -102,7 +97,7 @@ export default function Profil({ user, routes }: Props) {
 
   async function remove(id: string) {
     if (!confirm('Usunąć tę trasę?')) return
-    const res = await fetch(`/api/routes/${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/routes/${id}`, { method: 'DELETE', credentials: 'include' })
     if (!res.ok) {
       const j = await res.json().catch(() => ({}))
       toast.error(j.error || `Błąd usuwania (HTTP ${res.status})`)
@@ -113,7 +108,7 @@ export default function Profil({ user, routes }: Props) {
   }
   async function deleteAccount() {
     if (!confirm('Na pewno usunąć konto? Tej operacji nie da się cofnąć.')) return
-    const r = await fetch('/api/auth/delete-account', { method: 'POST' })
+    const r = await fetch('/api/auth/delete-account', { method: 'POST', credentials: 'include' })
     if (!r.ok) {
       const j = await r.json().catch(() => ({}))
       toast.error(j.message || 'Nie udało się usunąć konta.')
@@ -230,7 +225,7 @@ export default function Profil({ user, routes }: Props) {
                   <div className="card-body">
                     <div className="flex flex-wrap items-center gap-3">
                       {hasEndpoints ? (
-                        <a href={buildGoogleLink(active)} target="_blank" rel="noreferrer" className="btn btn-outline">
+                        <a href={buildGoogleDeep(active)} target="_blank" rel="noreferrer" className="btn btn-outline">
                           <Map className="w-4 h-4" /> Otwórz w Google Maps
                         </a>
                       ) : (
@@ -240,7 +235,7 @@ export default function Profil({ user, routes }: Props) {
                       {/* Apple tylko piesza */}
                       {active.mode === 'walk' ? (
                         hasEndpoints ? (
-                          <a href={buildAppleLink(active)} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                          <a href={buildAppleDeep(active)} target="_blank" rel="noreferrer" className="btn btn-ghost">
                             <Apple className="w-4 h-4" /> Otwórz w Apple Maps
                           </a>
                         ) : (

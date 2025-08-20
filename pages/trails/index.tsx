@@ -3,6 +3,7 @@ import Head from "next/head";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import GeoAutocomplete from "@/components/GeoAutocomplete";
+import { mobileAppleLink, mobileGoogleLink } from "@/lib/mobileLinks";
 
 type Mode = "walk" | "bicycle";
 
@@ -100,94 +101,72 @@ export default function TrailsPage() {
     }
   }
 
-  // linki do nawigacji
-  function googleLink() {
-    const travelmode = mode === "walk" ? "walking" : "bicycling";
-    const origin = startLabel || (start ? `${start[0]},${start[1]}` : "");
-    const destination = endLabel || (end ? `${end[0]},${end[1]}` : "");
-    const q = new URLSearchParams({
-      api: "1",
-      origin,
-      destination,
-      travelmode,
-    });
-    return `https://www.google.com/maps/dir/?${q.toString()}`;
+  // deep linki do map
+  function originStr() {
+    return startLabel || (start ? `${start[0]},${start[1]}` : "");
+  }
+  function destinationStr() {
+    return endLabel || (end ? `${end[0]},${end[1]}` : "");
   }
 
-  // Apple Maps pokazujemy tylko w trybie pieszym (rower w Apple nie działa)
-  function appleLink() {
-    const s = startLabel || (start ? `${start[0]},${start[1]}` : "");
-    const e = endLabel || (end ? `${end[0]},${end[1]}` : "");
-    const q = new URLSearchParams({ saddr: s, daddr: e, dirflg: "w" });
-    return `http://maps.apple.com/?${q.toString()}`;
-  }
+  async function saveCurrentRoute() {
+    if (!route || !start || !end) return;
 
-  function osmLink() {
-    if (!start || !end) return "#";
-    const engine = mode === "walk" ? "foot" : "bicycle";
-    const route = `${start[0]},${start[1]};${end[0]},${end[1]}`;
-    return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_${engine}&route=${route}`;
-  }
+    const name = `${startLabel || "Start"} → ${endLabel || "Meta"} (${
+      mode === "walk" ? "piesza" : "rowerowa"
+    })`;
 
-async function saveCurrentRoute() {
-  if (!route || !start || !end) return;
+    const payload = {
+      name,
+      mode,
+      distance: Math.round(distanceKm * 1000), // m
+      time: minutesTotal * 60,                  // s
+      geojson: route,
+      startLat: start[0],
+      startLon: start[1],
+      endLat: end[0],
+      endLon: end[1],
+    };
 
-  const name = `${startLabel || "Start"} → ${endLabel || "Meta"} (${mode === "walk" ? "piesza" : "rowerowa"})`;
-
-  // rozbij współrzędne na pola pod DB
-  const payload = {
-    name,
-    mode, // "walk" | "bicycle"
-    distance: Math.round(distanceKm * 1000), // [m]
-    time: minutesTotal * 60,                 // [s]
-    geojson: route,
-    startLat: start[0],
-    startLon: start[1],
-    endLat: end[0],
-    endLon: end[1],
-  };
-
-  try {
-    const r = await fetch("/api/routes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include", // ✨ upewnij się, że sesja idzie do API
-      body: JSON.stringify(payload),
-    });
-
-    // jeśli user nie zalogowany → fallback do localStorage
-    if (r.status === 401) {
-      const key = "zc_saved_routes";
-      const list: any[] = JSON.parse(localStorage.getItem(key) || "[]");
-      const id = Date.now();
-      // dla spójności z DB trzymajmy również rozbite pola (przyda się przy eksporcie GPX itp.)
-      list.unshift({
-        id,
-        name,
-        mode,
-        distance: payload.distance,
-        time: payload.time,
-        geojson: payload.geojson,
-        start: [payload.startLat, payload.startLon],
-        end: [payload.endLat, payload.endLon],
+    try {
+      const r = await fetch("/api/routes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
       });
-      localStorage.setItem(key, JSON.stringify(list));
-      window.location.href = "/trails/moje/moje";
-      return;
+
+      if (r.status === 401) {
+        const key = "zc_saved_routes";
+        const list: any[] = JSON.parse(localStorage.getItem(key) || "[]");
+        const id = Date.now();
+        list.unshift({
+          id,
+          name,
+          mode,
+          distance: payload.distance,
+          time: payload.time,
+          geojson: payload.geojson,
+          start: [payload.startLat, payload.startLon],
+          end: [payload.endLat, payload.endLon],
+        });
+        localStorage.setItem(key, JSON.stringify(list));
+        window.location.href = "/trails/moje/moje";
+        return;
+      }
+
+      const data = await r.json().catch(() => ({}));
+
+      if (!r.ok) {
+        throw new Error(typeof data?.error === "string" ? data.error : "Nie udało się zapisać trasy");
+      }
+
+      const newId = data?.id as string | undefined;
+      window.location.href = newId ? `/trails/${newId}` : "/profil";
+    } catch (err: any) {
+      alert(err?.message || "Błąd zapisu trasy");
     }
-
-    const data = await r.json().catch(() => ({}));
-
-    if (!r.ok) {
-      throw new Error(typeof data?.error === "string" ? data.error : "Nie udało się zapisać trasy");
-    }
-
-    const newId = data?.id as string | undefined;
-    window.location.href = newId ? `/trails/${newId}` : "/profil";
-  } catch (err: any) {
-    alert(err?.message || "Błąd zapisu trasy");
   }
-}
 
   const canOpenExternal = (startLabel && endLabel) || (start && end);
   const hasCoords = !!start && !!end;
@@ -279,7 +258,12 @@ async function saveCurrentRoute() {
             {/* Akcje nawigacyjne */}
             <div className="flex flex-wrap items-center gap-3">
               {canOpenExternal ? (
-                <a href={googleLink()} target="_blank" rel="noreferrer" className="btn btn-outline">
+                <a
+                  href={mobileGoogleLink(originStr(), destinationStr(), mode === "walk" ? "walking" : "bicycling")}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-outline"
+                >
                   Otwórz w Google Maps
                 </a>
               ) : (
@@ -290,7 +274,12 @@ async function saveCurrentRoute() {
 
               {mode === "walk" && (
                 canOpenExternal ? (
-                  <a href={appleLink()} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                  <a
+                    href={mobileAppleLink(originStr(), destinationStr(), true)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-ghost"
+                  >
                     Otwórz w Apple Maps
                   </a>
                 ) : (
@@ -302,7 +291,16 @@ async function saveCurrentRoute() {
 
               {hasCoords ? (
                 <>
-                  <a href={osmLink()} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                  <a
+                    href={(function () {
+                      const engine = mode === "walk" ? "foot" : "bicycle";
+                      const route = `${start![0]},${start![1]};${end![0]},${end![1]}`;
+                      return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_${engine}&route=${route}`;
+                    })()}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-ghost"
+                  >
                     Otwórz w OSM
                   </a>
                   <a

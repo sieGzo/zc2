@@ -1,6 +1,7 @@
 // pages/trails/moje/moje.tsx
 import Head from "next/head"
 import { useEffect, useState, useMemo } from "react"
+import { mobileAppleLink, mobileGoogleLink } from "@/lib/mobileLinks"
 
 type Saved = {
   id: number
@@ -13,7 +14,6 @@ type Saved = {
   geojson: any
 }
 
-// helpers
 function extractCoords(geojson: any): [number, number][] {
   const out: [number, number][] = []
   for (const f of geojson?.features ?? []) {
@@ -39,37 +39,6 @@ function formatDuration(s?: number) {
   return m ? `${h} h ${m} min` : `${h} h`
 }
 
-// link builders
-function buildGoogleLink(r: Saved) {
-  const travelmode = r.mode === "walk" ? "walking" : "bicycling"
-  const s = r.start ? `${r.start[0]},${r.start[1]}` : ""
-  const e = r.end ? `${r.end[0]},${r.end[1]}` : ""
-  const q = new URLSearchParams({ api: "1", origin: s, destination: e, travelmode })
-  return `https://www.google.com/maps/dir/?${q.toString()}`
-}
-function buildAppleLink(r: Saved) {
-  if (r.mode !== "walk") return "#"
-  const s = r.start ? `${r.start[0]},${r.start[1]}` : ""
-  const e = r.end ? `${r.end[0]},${r.end[1]}` : ""
-  const q = new URLSearchParams({ saddr: s, daddr: e, dirflg: "w" })
-  return `http://maps.apple.com/?${q.toString()}`
-}
-function buildOsmLink(r: Saved) {
-  if (!r.start || !r.end) return "#"
-  const engine = r.mode === "walk" ? "foot" : "bicycle"
-  const route = `${r.start[0]},${r.start[1]};${r.end[0]},${r.end[1]}`
-  return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_${engine}&route=${route}`
-}
-function buildGpxHref(r: Saved) {
-  if (!r.start || !r.end) return "#"
-  const mode = r.mode
-  const q = new URLSearchParams({
-    mode,
-    p: `${r.start[0]},${r.start[1]}`
-  })
-  return `/api/geo/route.gpx?${q.toString()}&p=${r.end[0]},${r.end[1]}`
-}
-
 export default function MyTrailsPage() {
   const [items, setItems] = useState<Saved[]>([])
   const [active, setActive] = useState<Saved | null>(null)
@@ -91,6 +60,9 @@ export default function MyTrailsPage() {
 
   const coords = useMemo(() => (active ? extractCoords(active.geojson) : []), [active])
   const hasEndpoints = active?.start && active?.end
+
+  const origin = active?.start ? `${active.start[0]},${active.start[1]}` : ""
+  const destination = active?.end ? `${active.end[0]},${active.end[1]}` : ""
 
   return (
     <main className="max-w-6xl mx-auto p-4 sm:p-6 overflow-x-hidden">
@@ -150,7 +122,10 @@ export default function MyTrailsPage() {
                 <div className="card-body">
                   <div className="flex flex-wrap items-center gap-3">
                     {hasEndpoints ? (
-                      <a href={buildGoogleLink(active)} target="_blank" rel="noreferrer" className="btn btn-outline">
+                      <a
+                        href={mobileGoogleLink(origin, destination, active.mode === "walk" ? "walking" : "bicycling")}
+                        target="_blank" rel="noreferrer" className="btn btn-outline"
+                      >
                         Otwórz w Google Maps
                       </a>
                     ) : (
@@ -159,7 +134,7 @@ export default function MyTrailsPage() {
 
                     {active.mode === "walk" && (
                       hasEndpoints ? (
-                        <a href={buildAppleLink(active)} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                        <a href={mobileAppleLink(origin, destination, true)} target="_blank" rel="noreferrer" className="btn btn-ghost">
                           Otwórz w Apple Maps
                         </a>
                       ) : (
@@ -169,10 +144,29 @@ export default function MyTrailsPage() {
 
                     {hasEndpoints ? (
                       <>
-                        <a href={buildOsmLink(active)} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                        <a
+                          href={(function () {
+                            const engine = active.mode === "walk" ? "foot" : "bicycle";
+                            const route = `${active.start![0]},${active.start![1]};${active.end![0]},${active.end![1]}`;
+                            return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_${engine}&route=${route}`;
+                          })()}
+                          target="_blank" rel="noreferrer" className="btn btn-ghost"
+                        >
                           Otwórz w OSM
                         </a>
-                        <a href={buildGpxHref(active)} target="_blank" rel="noreferrer" className="btn btn-ghost">
+                        <a
+                          href={(function () {
+                            const mode = active.mode;
+                            const q = new URLSearchParams({
+                              mode,
+                              p: `${active.start![0]},${active.start![1]}`
+                            });
+                            return `/api/geo/route.gpx?${q.toString()}&p=${active.end![0]},${active.end![1]}`;
+                          })()}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-ghost"
+                        >
                           Pobierz GPX
                         </a>
                       </>
