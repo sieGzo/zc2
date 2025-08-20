@@ -1,40 +1,13 @@
-// pages/api/promos.ts
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
-  // 👇 podmień obrazki na swoje w /public/promos/*
+export default function handler(_req: NextApiRequest, res: NextApiResponse) {
   const items = [
-    {
-      id: 'demo-egipt',
-      title: 'Egipt – 7 dni all inclusive (Hurghada)',
-      brand: 'TUI',
-      price: 'od 1999 zł',
-      dates: 'marzec–maj',
-      img: '/promos/egipt.webp',
-      href: '#',
-      tag: 'All inclusive',
-    },
-    {
-      id: 'demo-italy',
-      title: 'Tanie loty do Włoch (Rzym, Bolonia, Mediolan)',
-      brand: 'Ryanair',
-      price: 'od 49 zł',
-      dates: 'kwiecień–czerwiec',
-      img: '/promos/italy.webp',
-      href: '#',
-      tag: 'City break',
-    },
-    {
-      id: 'demo-lisbon',
-      title: 'Lizbona – noclegi w centrum',
-      brand: 'Booking',
-      price: 'od 120 zł/noc',
-      dates: 'maj–lipiec',
-      img: '/promos/lisbon.webp',
-      href: '#',
-      tag: 'Hotel',
-    },
+    { id:'is', title:'Islandia – city break',      brand:'Inspo',   price:'od 799 PLN', img:'/promos/flag_is.png', tag:'Loty' },
+    { id:'es', title:'Barcelona – kiedy lecieć?',  brand:'Inspo',                      img:'/promos/flag_es.png', tag:'Poradnik' },
+    { id:'us', title:'Pierwszy wyjazd do USA',     brand:'Praktycznie',                img:'/promos/flag_us.png', tag:'Praktycznie' },
+    { id:'no', title:'Oslo budżetowo',             brand:'Inspo',                      img:'/promos/flag_no.png', tag:'Loty' },
+    { id:'hu', title:'Budapeszt 36h – plan',       brand:'City Break',                 img:'/promos/flag_hu.png', tag:'Przewodnik' },
+    { id:'pl', title:'Tanie loty z Polski',        brand:'Inspo',                      img:'/promos/flag_pl.png', tag:'Loty' },
   ]
-
   res.status(200).json({ items })
 }

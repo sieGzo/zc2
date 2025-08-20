@@ -1,22 +1,23 @@
-// components/PromoGrid.tsx
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
-import clsx from 'clsx'
 
 type Promo = {
   id: string
   title: string
   brand: string
-  price?: string   // np. "od 399 PLN"
+  price?: string
   dates?: string
   img: string
   href?: string
-  tag?: string     // np. "Loty", "Hotele", "Atrakcie"
+  tag?: string
 }
 
 type State = 'idle' | 'loading' | 'ready' | 'error'
+
+// mini helper zamiast clsx
+const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(' ')
 
 export default function PromoGrid() {
   const [items, setItems] = useState<Promo[]>([])
@@ -27,7 +28,7 @@ export default function PromoGrid() {
 
   useEffect(() => {
     const ac = new AbortController()
-    const load = async () => {
+    ;(async () => {
       try {
         setState('loading')
         const r = await fetch('/api/promos', { signal: ac.signal, cache: 'no-store' })
@@ -41,12 +42,11 @@ export default function PromoGrid() {
           setState('error')
         }
       }
-    }
-    load()
+    })()
     return () => ac.abort()
   }, [])
 
-  // Zbiorcze filtry (zliczanie)
+  // Facety do filtrów
   const facets = useMemo(() => {
     const tags = new Map<string, number>()
     const brands = new Map<string, number>()
@@ -57,12 +57,10 @@ export default function PromoGrid() {
     return { tags, brands }
   }, [items])
 
-  const filtered = useMemo(() => {
-    return items.filter(i =>
-      (tag ? i.tag === tag : true) &&
-      (brand ? i.brand === brand : true)
-    )
-  }, [items, tag, brand])
+  const filtered = useMemo(
+    () => items.filter(i => (tag ? i.tag === tag : true) && (brand ? i.brand === brand : true)),
+    [items, tag, brand]
+  )
 
   if (state === 'error') {
     return <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">{error}</p>
@@ -71,17 +69,17 @@ export default function PromoGrid() {
   return (
     <section aria-label="Promocje">
       {/* FILTRY */}
-      {(items.length > 0) && (
+      {items.length > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-2">
           {[...facets.tags.entries()].map(([t, count]) => (
             <button
               key={t}
-              onClick={() => setTag(prev => prev === t ? null : t)}
-              className={clsx(
-                "rounded-full border px-3 py-1 text-sm transition",
+              onClick={() => setTag(prev => (prev === t ? null : t))}
+              className={cx(
+                'rounded-full border px-3 py-1 text-sm transition',
                 tag === t
-                  ? "border-[#f1861e] bg-[#f1861e]/10 text-[#f1861e]"
-                  : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
+                  ? 'border-[#f1861e] bg-[#f1861e]/10 text-[#f1861e]'
+                  : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
               )}
             >
               {t} <span className="opacity-60">({count})</span>
@@ -91,12 +89,12 @@ export default function PromoGrid() {
           {[...facets.brands.entries()].map(([b, count]) => (
             <button
               key={b}
-              onClick={() => setBrand(prev => prev === b ? null : b)}
-              className={clsx(
-                "rounded-full border px-3 py-1 text-sm transition",
+              onClick={() => setBrand(prev => (prev === b ? null : b))}
+              className={cx(
+                'rounded-full border px-3 py-1 text-sm transition',
                 brand === b
-                  ? "border-[#f1861e] bg-[#f1861e]/10 text-[#f1861e]"
-                  : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
+                  ? 'border-[#f1861e] bg-[#f1861e]/10 text-[#f1861e]'
+                  : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
               )}
               title={`Marka: ${b}`}
             >
@@ -106,7 +104,10 @@ export default function PromoGrid() {
 
           {(tag || brand) && (
             <button
-              onClick={() => { setTag(null); setBrand(null) }}
+              onClick={() => {
+                setTag(null)
+                setBrand(null)
+              }}
               className="ml-2 rounded-full border border-gray-200 px-3 py-1 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
             >
               Wyczyść filtry
@@ -145,9 +146,9 @@ function PromoCard({ promo, loading }: { promo?: Promo; loading?: boolean }) {
       href={promo?.href}
       target={isExternal ? '_blank' : undefined}
       rel={isExternal ? 'sponsored noopener' : undefined}
-      className={clsx(
-        "group relative overflow-hidden rounded-2xl border bg-white transition-all",
-        "border-gray-200 hover:shadow-xl dark:border-gray-800 dark:bg-gray-900"
+      className={cx(
+        'group relative overflow-hidden rounded-2xl border bg-white transition-all',
+        'border-gray-200 hover:shadow-xl dark:border-gray-800 dark:bg-gray-900'
       )}
       aria-label={promo?.title}
     >
@@ -198,8 +199,13 @@ function PromoCard({ promo, loading }: { promo?: Promo; loading?: boolean }) {
 
         <div className="mt-3 inline-flex items-center text-[#f1861e]">
           <span className="font-medium underline-offset-2 group-hover:underline">Zobacz ofertę</span>
-          <svg className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-            <path d="M12.293 5.293a1 1 0 011.414 0l4 4a.997.997 0 01.083.094l.007.01a1 1 0 01-.09 1.307l-4 4a1 1 0 01-1.414-1.414L14.586 11H2a1 1 0 110-2h12.586l-2.293-2.293a1 1 0 010-1.414z"/>
+          <svg
+            className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden
+          >
+            <path d="M12.293 5.293a1 1 0 011.414 0l4 4a.997.997 0 01.083.094l.007.01a1 1 0 01-.09 1.307l-4 4a1 1 0 01-1.414-1.414L14.586 11H2a1 1 0 110-2h12.586l-2.293-2.293a1 1 0 010-1.414z" />
           </svg>
         </div>
       </div>
@@ -225,7 +231,11 @@ function SkeletonCard() {
       {/* shimmer */}
       <div className="pointer-events-none absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/40 to-transparent dark:via-white/10" />
       <style jsx>{`
-        @keyframes shimmer { 100% { transform: translateX(100%); } }
+        @keyframes shimmer {
+          100% {
+            transform: translateX(100%);
+          }
+        }
       `}</style>
     </div>
   )
