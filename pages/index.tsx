@@ -62,24 +62,23 @@ export default function Home() {
         <section className="relative w-full px-4 md:px-8 pt-14 pb-10">
           {/* miękki akcent w tle */}
           <div className="pointer-events-none absolute inset-x-0 -top-12 h-48 bg-gradient-to-b from-[#f1861e]/15 to-transparent dark:from-[#f1861e]/10" />
-          <div className="relative max-w-6xl mx-auto grid md:grid-cols-2 gap-8 items-center">
-            <div>
-              <h1 className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight">
-                🦊 Zwiedzaj mądrze. Zwiedzaj chytrze.
-              </h1>
-              <h1 className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight">
-                <span className="text-[#f1861e]">Planer tras</span>{' '}
-                <span className="text-gray-900 dark:text-white">+ blog podróżniczy</span>
-              </h1>
+          
+          <div className="relative max-w-4xl mx-auto text-center">
+            <h1 className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight">
+              🦊 Zwiedzaj mądrze. Zwiedzaj chytrze.
+            </h1>
+            <h1 className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight">
+              <span className="text-[#f1861e]">Planer tras</span>{' '}
+              <span className="text-gray-900 dark:text-white">+ blog podróżniczy</span>
+            </h1>
 
-              <div className="mt-8 flex flex-col sm:flex-row items-center gap-3">
-                <Link href="/trails" className="btn btn-primary rounded-full btn-md w-full sm:w-auto">
-                  🚀 Otwórz planer trasy
-                </Link>
-                <Link href="/blog" className="btn btn-outline rounded-full btn-md w-full sm:w-auto">
-                  📖 Przejdź do bloga
-                </Link>
-              </div>
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link href="/trails" className="btn btn-primary rounded-full btn-md w-full sm:w-auto">
+                🚀 Otwórz planer trasy
+              </Link>
+              <Link href="/blog" className="btn btn-outline rounded-full btn-md w-full sm:w-auto">
+                📖 Przejdź do bloga
+              </Link>
             </div>
           </div>
         </section>
@@ -96,16 +95,18 @@ export default function Home() {
                 <Link
                   key={p.title}
                   href={p.href}
-                  className="rounded-lg overflow-hidden border border-gray-200/70 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md transition w-full max-w-sm text-left"
+                  className="group relative rounded-lg overflow-hidden border border-gray-200/70 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-xl hover:scale-[1.02] transition-transform duration-300 w-full max-w-sm text-left"
                 >
                   <div className="h-40 relative">
                     <Image
                       src={p.img}
                       alt={p.title}
                       fill
-                      className="object-cover"
+                      className="object-cover object-top transition-transform duration-300 group-hover:scale-105"
                       sizes="(max-width: 768px) 100vw, 33vw"
                     />
+                    {/* overlay na hover */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                   <div className="p-4">
                     <span className="kicker">{p.tag}</span>
