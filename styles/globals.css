@@ -132,7 +132,7 @@
    ========================= */
 
 body.contrast { background-color: #000 !important; color: #fff !important; }
-body.contrast a { color: #fff !important; }
+body.contrast a { color: #fff !important; text-decoration: underline !important; }
 
 /* najczęstsze jasne tła */
 body.contrast .bg-white,
@@ -170,6 +170,24 @@ body.contrast .dark\:text-gray-400 {
   color: #fff !important;
 }
 
+/* 🔧 RESET KRYCIA I ALFY TEKSTU */
+body.contrast :where(h1,h2,h3,h4,h5,h6,p,span,small,li,blockquote,figcaption,div,a,em,strong,label,time,code,pre,mark,dt,dd,button,input,select,textarea) {
+  --tw-text-opacity: 1 !important;
+  opacity: 1 !important;
+  color: #fff !important;
+}
+/* text-gray-500/80, text-white/60 itd. → usuń komponent alfa */
+body.contrast [class*="/"] { --tw-text-opacity: 1 !important; }
+
+/* @tailwindcss/typography (prose) */
+body.contrast .prose :where(p,li,blockquote,figcaption,code,strong,em) {
+  color: #fff !important;
+}
+body.contrast .prose :where(a) {
+  color: #fff !important;
+  text-decoration: underline !important;
+}
+
 /* wyraźny focus w HC */
 body.contrast :focus-visible {
   outline: 3px solid #ffeb3b !important;
@@ -194,6 +212,7 @@ body.contrast picture,
 body.contrast svg,
 body.contrast canvas { filter: none !important; }
 
+/* formularze */
 body.contrast button,
 body.contrast input,
 body.contrast select,
@@ -237,7 +256,9 @@ body.contrast .pill {
 }
 body.contrast .pill [aria-hidden="true"] { opacity: 1 !important; }
 
-/* HERO (kontrast) */
+/* HERO (kontrast) + nagłówki */
+body.contrast h1,
+body.contrast .heading,
 body.contrast .hero-title {
   color: #ffeb3b !important;
   background: none !important;
