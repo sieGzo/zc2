@@ -14,7 +14,7 @@ export default function Regulamin() {
           <li>Właściciel nie ponosi odpowiedzialności za decyzje podjęte na podstawie treści serwisu.</li>
           <li>Linki afiliacyjne mogą skutkować otrzymaniem prowizji przez właściciela serwisu.</li>
           <li>Zakazane jest kopiowanie treści bez zgody właściciela.</li>
-          <li>Kontakt: hello@przyklad.pl</li>
+          <li>Kontakt: kontakt@zwiedzajchytrze.pl</li>
         </ol>
       </main>
     </>
