@@ -43,7 +43,6 @@ async function verifyTurnstile(token?: string, ip?: string | string[]) {
       cdata: data?.cdata ? 'present' : 'none',
     });
 
-    // Zwracamy surowe dane, żeby UI mógł je zmapować
     return { ok: !!data.success, detail: data as any };
   } catch (e) {
     console.error('Turnstile verify exception:', e);
@@ -56,8 +55,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ ok: false, message: 'Metoda niedozwolona' });
   }
 
-  const { username, email, password, turnstileToken } = (req.body ?? {}) as {
+  // ⬇️ DODANE: przyjmujemy też subscribe + newsletterName
+  const { username, email, password, turnstileToken, subscribe, newsletterName } = (req.body ?? {}) as {
     username?: string; email?: string; password?: string; turnstileToken?: string;
+    subscribe?: boolean; newsletterName?: string;
   };
 
   const usernameNorm = (username ?? '').trim();
@@ -87,7 +88,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const ts = await verifyTurnstile(turnstileToken, ip);
   if (!ts.ok) {
-    // 🔎 przepisujemy najczęstsze kody Turnstile na zrozumiałe info
     const codes = (ts as any)?.detail?.['error-codes'] || [];
     let friendly = 'Weryfikacja nie powiodła się. Spróbuj ponownie.';
     if (codes.includes('invalid-input-response')) friendly = 'Sesja wygasła lub token jest nieprawidłowy. Odśwież weryfikację i spróbuj ponownie.';
@@ -106,7 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       prisma.user.findUnique({ where: { email: emailNorm } }),
       prisma.user.findUnique({ where: { username: usernameNorm } }),
     ]);
-    if (emailExists)   return res.status(409).json({ ok: false, message: 'Ten e-mail jest już zarejestrowany.' });
+    if (emailExists)    return res.status(409).json({ ok: false, message: 'Ten e-mail jest już zarejestrowany.' });
     if (usernameExists) return res.status(409).json({ ok: false, message: 'Nazwa użytkownika jest już zajęta.' });
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -123,6 +123,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       select: { id: true, username: true, email: true },
     });
 
+    // ⬇️ DODANE: „kuloodporny” zapis newslettera – po stronie serwera
+    if (subscribe) {
+      const subEmail = emailNorm;
+      const name = (newsletterName || usernameNorm || subEmail.split('@')[0] || '').trim();
+
+      try {
+        await prisma.newsletterSubscriber.upsert({
+          where: { email: subEmail },
+          update: { name: name || undefined },
+          create: { email: subEmail, name: name || undefined, verified: false },
+        });
+
+        // (opcjonalnie) Buttondown – bez psucia rejestracji, jeśli się nie uda
+        if (process.env.BUTTONDOWN_API_KEY) {
+          await fetch('https://api.buttondown.email/v1/subscribers', {
+            method: 'POST',
+            headers: {
+              Authorization: `Token ${process.env.BUTTONDOWN_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email: subEmail, notes: name || undefined, tags: ['newsletter'] }),
+          }).catch(() => {});
+        }
+      } catch (e) {
+        console.warn('newsletter subscribe (server) failed:', e);
+        // NIE przerywamy rejestracji – to best‑effort
+      }
+    }
+
+    // e‑mail weryfikacyjny
     try {
       await sendVerificationEmail(emailNorm, token);
     } catch (e) {
