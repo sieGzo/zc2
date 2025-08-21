@@ -14,11 +14,11 @@ export default function Home() {
   const site = 'https://zwiedzajchytrze.pl'
   const ogImage = `${site}/og.jpg`
 
-  // 👇 pozycjonowanie zdjęć w kartach (1 i 2 wyżej)
+  // Pozycjonowanie zdjęć w kartach (1 i 2 odrobinę wyżej)
   const blogCards = [
-    { tag: 'NORWEGIA', title: 'Lofoty bez tłumów',        href: '/blog', img: '/lofoten.webp',  pos: 'object-[center_30%]' },
-    { tag: 'USA',      title: 'Roadtrip przez parki',      href: '/blog', img: '/usa.webp',      pos: 'object-[center_20%]' },
-    { tag: 'ISLANDIA', title: 'Zorza, wodospady i mgła',   href: '/blog', img: '/iceland.webp',  pos: 'object-top' },
+    { tag: 'NORWEGIA', title: 'Lofoty bez tłumów',       href: '/blog', img: '/lofoten.webp', pos: 'object-[center_30%]' },
+    { tag: 'USA',      title: 'Roadtrip przez parki',     href: '/blog', img: '/usa.webp',     pos: 'object-[center_20%]' },
+    { tag: 'ISLANDIA', title: 'Zorza, wodospady i mgła',  href: '/blog', img: '/iceland.webp', pos: 'object-top' },
   ]
 
   const jsonLd = {
@@ -41,78 +41,97 @@ export default function Home() {
         <meta name="description" content={description} />
         <meta name="robots" content="index,follow" />
         <meta name="theme-color" content="#f1861e" />
+
+        {/* Open Graph */}
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
         <meta property="og:image" content={ogImage} />
         <meta property="og:url" content={site} />
         <meta property="og:type" content="website" />
+
+        {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={title} />
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={ogImage} />
+
+        {/* Structured data */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </Head>
 
       <main className="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-      {/* HERO */}
-      <section className="relative w-full px-4 md:px-8 pt-14 pb-10">
-        <div className="pointer-events-none absolute inset-x-0 -top-12 h-48 bg-gradient-to-b from-[#f1861e]/15 to-transparent dark:from-[#f1861e]/10" />
+        {/* HERO */}
+        <section className="relative w-full px-4 md:px-8 pt-14 pb-10">
+          {/* delikatny gradient tła */}
+          <div className="pointer-events-none absolute inset-x-0 -top-12 h-48 bg-gradient-to-b from-[#f1861e]/15 to-transparent dark:from-[#f1861e]/10" />
 
-        <div className="relative max-w-4xl mx-auto text-center flex flex-col items-center gap-4">
-          {/* Lisek ozdobny */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="relative"
-          >
-            <Image
-              src="/lisek-email.png"
-              alt="Lisek Zwiedzaj Chytrze"
-              width={80}
-              height={80}
-              className="animate-bounce-slow mx-auto"
-              priority
-            />
-          </motion.div>
+          <div className="relative max-w-5xl mx-auto text-center flex flex-col items-center gap-4">
+            {/* Linia 1 */}
+            <motion.h1
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55 }}
+              className="mt-2 text-3xl md:text-5xl font-extrabold leading-tight"
+            >
+              Zwiedzaj mądrze
+            </motion.h1>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.05 }}
-            className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight"
-          >
-            Zwiedzaj mądrze. Zwiedzaj chytrze.
-          </motion.h1>
+            {/* Lisek pomiędzy liniami */}
+            <motion.div
+              initial={{ opacity: 0, y: 12, rotate: -6 }}
+              animate={{ opacity: 1, y: 0, rotate: 0 }}
+              transition={{ duration: 0.6, delay: 0.05 }}
+              className="relative"
+            >
+              <Image
+                src="/lisek-email.png"
+                alt="Lisek Zwiedzaj Chytrze"
+                width={88}
+                height={88}
+                className="mx-auto animate-bounce-slow"
+                priority
+              />
+            </motion.div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="mt-3 text-3xl md:text-5xl font-extrabold leading-tight"
-          >
-            <span className="text-[#f1861e]">Planer tras</span>{' '}
-            <span className="text-gray-900 dark:text-white">+ blog podróżniczy</span>
-          </motion.h1>
+            {/* Linia 2 (bez kropek) */}
+            <motion.h1
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: 0.1 }}
+              className="text-3xl md:text-5xl font-extrabold leading-tight"
+            >
+              Zwiedzaj chytrze
+            </motion.h1>
 
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-            className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3"
-          >
-            <Link href="/trails" className="btn btn-primary rounded-full btn-md w-full sm:w-auto">
-              🚀 Otwórz planer trasy
-            </Link>
-            <Link href="/blog" className="btn btn-outline rounded-full btn-md w-full sm:w-auto">
-              📖 Przejdź do bloga
-            </Link>
-          </motion.div>
-        </div>
-      </section>
+            {/* Subheader */}
+            <motion.p
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: 0.15 }}
+              className="mt-2 text-2xl md:text-4xl font-extrabold"
+            >
+              <span className="text-[#f1861e]">Planer tras</span>{' '}
+              <span className="text-gray-900 dark:text-white">+ blog podróżniczy</span>
+            </motion.p>
 
+            {/* CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: 0.2 }}
+              className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3"
+            >
+              <Link href="/trails" className="btn btn-primary rounded-full btn-md w-full sm:w-auto">
+                🚀 Otwórz planer trasy
+              </Link>
+              <Link href="/blog" className="btn btn-outline rounded-full btn-md w-full sm:w-auto">
+                📖 Przejdź do bloga
+              </Link>
+            </motion.div>
+          </div>
+        </section>
 
-        {/* Wideo intro */}
+        {/* Krótkie intro wideo */}
         <IntroVideo />
 
         {/* Blog – 3 karty */}
@@ -138,7 +157,6 @@ export default function Home() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                   <div className="p-4">
-                    {/* tag jako „kicker” */}
                     <span className="kicker">{p.tag}</span>
                     <h3 className="mt-2 font-semibold">{p.title}</h3>
                     <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Czytaj dalej →</p>
