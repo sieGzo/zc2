@@ -66,15 +66,16 @@ export default function Home() {
           <div className="pointer-events-none absolute inset-x-0 -top-12 h-48 bg-gradient-to-b from-[#f1861e]/15 to-transparent dark:from-[#f1861e]/10" />
 
           <div className="relative max-w-5xl mx-auto text-center flex flex-col items-center gap-4">
-            {/* Linia 1 */}
-            <motion.h1
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55 }}
-              className="mt-2 text-3xl md:text-5xl font-extrabold leading-tight"
-            >
-              Zwiedzaj mądrze
-            </motion.h1>
+           {/* Linia 1 */}
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55 }}
+            className="mt-2 text-3xl md:text-5xl font-extrabold leading-tight"
+          >
+            <span className="text-gray-900 dark:text-white">Zwiedzaj </span>
+            <span className="text-[#f1861e]">mądrze</span>
+          </motion.h1>
 
             {/* Lisek pomiędzy liniami */}
             <motion.div
@@ -93,15 +94,16 @@ export default function Home() {
               />
             </motion.div>
 
-            {/* Linia 2 (bez kropek) */}
-            <motion.h1
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: 0.1 }}
-              className="text-3xl md:text-5xl font-extrabold leading-tight"
-            >
-              Zwiedzaj chytrze
-            </motion.h1>
+             {/* Linia 2 */}
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.1 }}
+            className="text-3xl md:text-5xl font-extrabold leading-tight"
+          >
+            <span className="text-gray-900 dark:text-white">Zwiedzaj </span>
+            <span className="text-[#f1861e]">chytrze</span>
+          </motion.h1>
 
             {/* Subheader */}
             <motion.p

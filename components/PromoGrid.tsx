@@ -2,16 +2,17 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 
-type Promo = {
+export type Promo = {
   id: string
   title: string
   brand: string
   price?: string
   dates?: string
   img: string
-  href?: string
   tag?: string
+  href?: string // jeśli brak → automatycznie /promo/[id]
 }
 
 type State = 'idle' | 'loading' | 'ready' | 'error'
@@ -136,25 +137,22 @@ export default function PromoGrid() {
 /* -------------------------- subkomponent: karta -------------------------- */
 
 function PromoCard({ promo, loading }: { promo?: Promo; loading?: boolean }) {
-  if (loading) return <SkeletonCard />
+  if (loading || !promo) return <SkeletonCard />
 
-  const Wrapper: any = promo?.href ? 'a' : 'div'
-  const isExternal = Boolean(promo?.href?.startsWith('http'))
+  const href = promo.href ?? `/promo/${promo.id}`
+  const isExternal = href.startsWith('http')
 
-  return (
-    <Wrapper
-      href={promo?.href}
-      target={isExternal ? '_blank' : undefined}
-      rel={isExternal ? 'sponsored noopener' : undefined}
+  const Content = (
+    <div
       className={cx(
         'group relative overflow-hidden rounded-2xl border bg-white transition-all',
         'border-gray-200 hover:shadow-xl dark:border-gray-800 dark:bg-gray-900'
       )}
-      aria-label={promo?.title}
+      aria-label={promo.title}
     >
       {/* obrazek z gradientem i wstążkami */}
       <div className="relative aspect-[16/9]">
-        {promo?.img ? (
+        {promo.img ? (
           <Image
             src={promo.img}
             alt={promo.title}
@@ -170,14 +168,14 @@ function PromoCard({ promo, loading }: { promo?: Promo; loading?: boolean }) {
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-black/0 to-black/0" />
 
         {/* cena (wstążka) */}
-        {promo?.price && (
+        {promo.price && (
           <div className="absolute left-3 top-3 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
             {promo.price}
           </div>
         )}
 
         {/* tag */}
-        {promo?.tag && (
+        {promo.tag && (
           <div className="absolute right-3 top-3 rounded-full border border-white/40 bg-white/70 px-3 py-1 text-xs font-medium backdrop-blur dark:border-white/10 dark:bg-white/10 dark:text-white">
             {promo.tag}
           </div>
@@ -188,13 +186,13 @@ function PromoCard({ promo, loading }: { promo?: Promo; loading?: boolean }) {
       <div className="p-4">
         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
           <span className="rounded-full border px-2 py-0.5 text-[11px] dark:border-gray-700">
-            {promo?.brand || '—'}
+            {promo.brand || '—'}
           </span>
-          {promo?.dates && <span className="ml-auto">{promo.dates}</span>}
+          {promo.dates && <span className="ml-auto">{promo.dates}</span>}
         </div>
 
         <h3 className="mt-2 line-clamp-2 text-base font-semibold leading-snug">
-          {promo?.title}
+          {promo.title}
         </h3>
 
         <div className="mt-3 inline-flex items-center text-[#f1861e]">
@@ -209,7 +207,15 @@ function PromoCard({ promo, loading }: { promo?: Promo; loading?: boolean }) {
           </svg>
         </div>
       </div>
-    </Wrapper>
+    </div>
+  )
+
+  return isExternal ? (
+    <a href={href} target="_blank" rel="noopener noreferrer sponsored">
+      {Content}
+    </a>
+  ) : (
+    <Link href={href}>{Content}</Link>
   )
 }
 
