@@ -4,19 +4,41 @@ import Link from 'next/link'
 import Image from 'next/image'
 
 type Ingredient = { name: string; quantity?: string | number | null; unit?: string | null }
+
+// --- Uporządkowane typy odżywki (obsługujemy 2 formaty) ---
+type NutritionArrayItem = { basis: 'per_serving'; calories_kcal?: number }
+type NutritionArray = NutritionArrayItem[]
+type NutritionObj = { kcal?: number; calories_kcal?: number } | null
+type Nutrition = NutritionArray | NutritionObj
+
 interface Recipe {
   id: string
   title: string
   ingredients: Ingredient[]
   tags?: string[]
   image?: string | null
-  nutrition?: { basis: 'per_serving'; calories_kcal?: number }[] | null
+  nutrition?: Nutrition | null
 }
 interface ApiResponse { items: Recipe[]; total: number }
 
 const BRAND_RED = '#A21F1A'
 const BRAND_GREEN = '#125D49'
 const BLUR_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='
+
+// Zwraca kcal na porcję dla obu formatów nutrition
+function getKcal(nutrition: Nutrition | undefined | null): number | undefined {
+  if (!nutrition) return undefined
+  if (Array.isArray(nutrition)) {
+    return nutrition.find(n => n.basis === 'per_serving')?.calories_kcal
+  }
+  // obiekt z API ({kcal} lub {calories_kcal})
+  if (typeof nutrition === 'object') {
+    const obj = nutrition as Record<string, unknown>
+    const kcal = (obj['kcal'] as number | undefined) ?? (obj['calories_kcal'] as number | undefined)
+    return typeof kcal === 'number' ? kcal : undefined
+  }
+  return undefined
+}
 
 export default function JemfitList() {
   const [raw, setRaw] = useState<Recipe[]>([])
@@ -98,7 +120,7 @@ export default function JemfitList() {
     <main className="bg-white dark:bg-gray-900 min-h-screen">
       <Head><title>JemFit — przepisy</title></Head>
 
-      {/* >>> Większe logo w gradientowym nagłówku (użyjemy /jemfit-logo.2.png) <<< */}
+      {/* >>> Większe logo w gradientowym nagłówku (użyjemy /jemfit-logo.png) <<< */}
       <header className="w-full" style={{ background: `linear-gradient(90deg, ${BRAND_GREEN}, ${BRAND_RED})` }}>
         <div className="max-w-6xl mx-auto flex items-center gap-4 p-3">
           <div className="relative h-12 md:h-14 w-auto">
@@ -216,7 +238,7 @@ export default function JemfitList() {
         {/* Grid kart */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map(r => {
-            const kcal = r.nutrition?.find(n => n.basis === 'per_serving')?.calories_kcal
+            const kcal = getKcal(r.nutrition)
             return (
               <article key={r.id} className="rounded-2xl border shadow-sm overflow-hidden bg-white dark:bg-gray-800">
                 <Link href={`/jemfit/${r.id}`} className="group block">
