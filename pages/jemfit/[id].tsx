@@ -6,6 +6,7 @@ import { useRouter } from 'next/router'
 
 type Ingredient = { name: string; quantity?: string | number | null; unit?: string | null }
 type Macros = { kcal?: number; carbs?: number; protein?: number; fat?: number } | null | undefined
+
 type NutritionArrayItem = {
   basis: 'per_serving'
   calories_kcal?: number
@@ -23,13 +24,13 @@ interface Recipe {
   id: string
   title: string
   ingredients: Ingredient[]
-  instructions?: string[] | null
+  instructions?: string[] | string | null
   image?: string | null
   tags?: string[] | null
   pre_info?: string | null
   pro_tip?: string | null
-  nutrition?: Nutrition
-  nutrition100?: Macros
+  nutrition?: Nutrition            // per serving (obsługujemy tablicę i obiekt)
+  nutrition100?: Macros            // per 100 g (opcjonalnie)
   cuisine?: string | string[] | null
   course?: string | string[] | null
   category?: string | string[] | null
@@ -40,32 +41,21 @@ const BRAND_RED = '#A21F1A'
 const BRAND_GREEN = '#125D49'
 const BLUR_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='
 
+// --- Helpers: makra, tagi, instrukcje ---
 function normalizeMacrosPerServing(nutrition: Nutrition): Macros {
   if (!nutrition) return null
   if (Array.isArray(nutrition)) {
     const n = nutrition.find(x => x?.basis === 'per_serving') || nutrition[0]
     if (!n) return null
-    return {
-      kcal: n.calories_kcal,
-      carbs: n.carbs_g,
-      protein: n.protein_g,
-      fat: n.fat_g,
-    }
+    return { kcal: n.calories_kcal, carbs: n.carbs_g, protein: n.protein_g, fat: n.fat_g }
   }
   const o = nutrition as { kcal?: number; calories_kcal?: number; carbs?: number; protein?: number; fat?: number }
-  return {
-    kcal: typeof o.kcal === 'number' ? o.kcal : o.calories_kcal,
-    carbs: o.carbs,
-    protein: o.protein,
-    fat: o.fat,
-  }
+  return { kcal: typeof o.kcal === 'number' ? o.kcal : o.calories_kcal, carbs: o.carbs, protein: o.protein, fat: o.fat }
 }
-
 function fmtNum(n?: number | null, digits = 0) {
   if (typeof n !== 'number' || Number.isNaN(n)) return '—'
   return n.toLocaleString('pl-PL', { maximumFractionDigits: digits, minimumFractionDigits: digits })
 }
-
 function toArr(x: unknown): string[] {
   if (Array.isArray(x)) return x.map(String)
   if (typeof x === 'string') return x.split(/[;,/]/).map(s=>s.trim()).filter(Boolean)
@@ -82,6 +72,16 @@ function getTags(r: Recipe): string[] {
   ]
   return Array.from(new Set(raw.map(normTag).filter(Boolean)))
 }
+function normalizeInstructions(instr?: string[] | string | null): string[] {
+  if (!instr) return []
+  if (Array.isArray(instr)) return instr.map(s => String(s).trim()).filter(Boolean)
+  // jeśli przyszło jako jeden string — tnij po newline / cyfrach z kropką
+  const s = String(instr)
+  const byLine = s.split(/\r?\n+/).map(x => x.trim()).filter(Boolean)
+  if (byLine.length > 1) return byLine
+  // fallback: split po „1.”, „2.” itp.
+  return s.split(/\s*(?:^|\n|\r|^|\.)\s*(?=\d+\.)/g).map(x => x.replace(/^\d+\.\s*/, '').trim()).filter(Boolean)
+}
 
 export default function RecipePage() {
   const router = useRouter()
@@ -91,6 +91,7 @@ export default function RecipePage() {
   const [error, setError] = useState<string | null>(null)
   const [imgMap, setImgMap] = useState<Record<string, string>>({})
 
+  // fetch przepisu
   useEffect(() => {
     if (!id) return
     let cancelled = false
@@ -105,12 +106,11 @@ export default function RecipePage() {
         const item = (d as any).item ?? ((d as any).items?.find?.((x: Recipe)=>x.id===id)) ?? null
         setData(item)
       })
-      .catch(() => {
-        if (!cancelled) setError('Nie udało się wczytać przepisu.')
-      })
+      .catch(() => { if (!cancelled) setError('Nie udało się wczytać przepisu.') })
     return () => { cancelled = true }
   }, [id])
 
+  // mapa obrazków
   useEffect(() => {
     let cancelled = false
     fetch('/recipes_images.json')
@@ -132,6 +132,7 @@ export default function RecipePage() {
   const per100: Macros = data?.nutrition100
   const hasPer100 = !!(per100 && (per100.kcal ?? per100.carbs ?? per100.protein ?? per100.fat))
   const tags = getTags(data || ({} as any))
+  const steps = useMemo(() => normalizeInstructions(data?.instructions), [data?.instructions])
 
   return (
     <main className="bg-white dark:bg-gray-900 min-h-screen">
@@ -247,23 +248,27 @@ export default function RecipePage() {
             <section className="mb-8">
               <h2 className="font-medium mb-3">Składniki</h2>
               <ul className="text-[13px] space-y-1">
-                {data.ingredients.map((i, idx) => (
-                  <li key={idx} className="flex justify-between gap-3">
-                    <span className="text-gray-600 dark:text-gray-300 shrink-0 text-[12px]">
-                      {i.quantity}{i.unit ? ` ${i.unit}` : ''}
-                    </span>
-                    <span className="min-w-0 text-right">{i.name}</span>
-                  </li>
-                ))}
+                {data.ingredients.map((i, idx) => {
+                  const qty = (i.quantity ?? '').toString().trim()
+                  const unit = i.unit ? ` ${i.unit}` : ''
+                  return (
+                    <li key={idx} className="flex justify-between gap-3">
+                      <span className="text-gray-600 dark:text-gray-300 shrink-0 text-[12px]">
+                        {qty || '—'}{unit}
+                      </span>
+                      <span className="min-w-0 text-right">{i.name}</span>
+                    </li>
+                  )
+                })}
               </ul>
             </section>
 
             {/* Instrukcje */}
-            {!!(data.instructions && data.instructions.length) && (
+            {steps.length > 0 && (
               <section className="mb-12">
                 <h2 className="font-medium mb-3">Przygotowanie</h2>
                 <ol className="list-decimal pl-5 space-y-2 text-sm">
-                  {data.instructions.map((step, idx) => (
+                  {steps.map((step, idx) => (
                     <li key={idx} className="whitespace-pre-line">{step}</li>
                   ))}
                 </ol>
