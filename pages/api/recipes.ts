@@ -1,262 +1,201 @@
-// pages/api/recipes.ts
+// /pages/api/recipes.ts
 import type { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs'
 import path from 'path'
 
 type Ingredient = { name: string; quantity?: string | number | null; unit?: string | null }
 type Macros = { kcal?: number; carbs?: number; protein?: number; fat?: number } | null | undefined
-type NutritionArrayItem = { basis?: 'per_serving' | string; calories_kcal?: number; carbs_g?: number; protein_g?: number; fat_g?: number }
-type Nutrition = NutritionArrayItem[] | { kcal?: number; calories_kcal?: number; carbs?: number; protein?: number; fat?: number } | null | undefined
 
-interface RecipeIn {
-  id?: string
-  slug?: string
-  title?: string
-  name?: string
-
-  ingredients?: Ingredient[] | string[]
-  ingredient_list?: Ingredient[] | string[]
-  image?: string | null
-
-  // tagi i alternatywy
-  tags?: string[] | string | null
-  tag?: string[] | string | null
-  labels?: string[] | string | null
-  categories?: string[] | string | null
-  category_name?: string[] | string | null
-  cuisine?: string | string[] | null
-  course?: string | string[] | null
-  category?: string | string[] | null
-  meal_type?: string | string[] | null
-
-  // panele i instrukcje – aliasy
-  pre_info?: string | null
-  preinfo?: string | null
-  co_wiedziec?: string | null
-  notes_before?: string | null
-  about?: string | null
-  description_short?: string | null
-
-  pro_tip?: string | null
-  tips?: string | string[] | null
-  uwagi?: string | string[] | null
-  note?: string | null
-  extra_tips?: string | null
-
-  instructions?: string[] | string | null
-  instruction?: string[] | string | null
-  steps?: string[] | string | null
-  steps_text?: string | null
-  directions?: string[] | string | null
-  przygotowanie?: string[] | string | null
-  opis_przygotowania?: string | null
-  method?: string[] | string | null
-  howto?: string[] | string | null
-
-  nutrition?: Nutrition
-  nutrition100?: Macros
+type NutritionArrayItem = {
+  basis?: 'per_serving' | string
+  calories_kcal?: number
+  carbs_g?: number
+  protein_g?: number
+  fat_g?: number
 }
+type Nutrition =
+  | NutritionArrayItem[]
+  | { kcal?: number; calories_kcal?: number; carbs?: number; protein?: number; fat?: number }
+  | null
+  | undefined
 
-interface RecipeOut {
+export interface Recipe {
   id: string
   title: string
   ingredients: Ingredient[]
+  instructions?: string[] | string | any[] | null
   image?: string | null
-  // filtrowanie/wyświetlanie
   tags?: string[] | null
+  pre_info?: string | null
+  pro_tip?: string | null
+  nutrition?: Nutrition            // per serving (obsługujemy tablicę i obiekt)
+  nutrition100?: Macros            // per 100 g (opcjonalnie)
   cuisine?: string | string[] | null
   course?: string | string[] | null
   category?: string | string[] | null
   meal_type?: string | string[] | null
-  // panele + instrukcje
-  pre_info?: string | null
-  pro_tip?: string | null
-  instructions?: string[] | null
-  // makra
-  nutrition?: Nutrition
-  nutrition100?: Macros
 }
 
-function toArr(x: any): string[] {
-  if (!x) return []
-  if (Array.isArray(x)) return x.flat().map(String)
-  return String(x).split(/[;,/]/).map(s => s.trim()).filter(Boolean)
-}
-function toText(x: any): string | null {
-  if (!x) return null
-  if (Array.isArray(x)) return x.map(String).join('\n').trim() || null
-  const s = String(x).trim()
-  return s || null
-}
-function normalizeIngredients(src?: Ingredient[] | string[]): Ingredient[] {
-  if (!src) return []
-  return src.map((row: any) => {
-    if (typeof row === 'string') return { name: row }
-    const { name, quantity, unit } = row || {}
-    return { name: String(name || '').trim(), quantity: quantity ?? null, unit: unit ?? null }
-  }).filter(i => i.name)
-}
-function normalizeInstructions(x: any): string[] | null {
-  const text = toText(x)
-  if (!text) return null
-  // spróbuj po newline
-  let parts = text.split(/\r?\n+/).map(s => s.trim()).filter(Boolean)
-  // jeżeli wygląda jak jeden akapit z numeracją "1. ", tnij po numerach
-  if (parts.length <= 1) {
-    parts = text.split(/\s*(?:^|\n|\r)\s*(?=\d+\.)/g).map(s => s.replace(/^\d+\.\s*/, '').trim()).filter(Boolean)
+// ---------- Helpers ----------
+
+const tryRead = (p: string): string | null => {
+  try {
+    return fs.readFileSync(p, 'utf8')
+  } catch {
+    return null
   }
-  return parts.length ? parts : null
 }
-function mergeInstructions(r: RecipeIn): string[] | null {
-  // preferencje: tablice > stringi; bierz pierwsze niepuste
-  const candidates: any[] = [
-    r.instructions, r.instruction, r.steps, r.directions, r.howto, r.method,
-    r.przygotowanie, r.opis_przygotowania, r.steps_text
+
+function loadRaw(): any[] {
+  const root = process.cwd()
+
+  const candidates = [
+    path.join(root, 'public', 'jemfit_recipes.jsonl'),
+    path.join(root, 'data', 'jemfit_recipes.jsonl'),
+    path.join(root, 'public', 'jemfit_recipes.json'),
+    path.join(root, 'data', 'jemfit_recipes.json'),
   ]
-  for (const c of candidates) {
-    if (!c) continue
-    if (Array.isArray(c)) {
-      const arr = c.map((s: any) => String(s).trim()).filter(Boolean)
-      if (arr.length) return arr
-    } else {
-      const arr = normalizeInstructions(c)
-      if (arr?.length) return arr
+
+  for (const file of candidates) {
+    const data = tryRead(file)
+    if (!data) continue
+
+    if (file.endsWith('.jsonl')) {
+      // JSONL: jedna linia = jeden JSON
+      return data
+        .split(/\r?\n/)
+        .map(l => l.trim())
+        .filter(Boolean)
+        .map(l => {
+          try { return JSON.parse(l) } catch { return null }
+        })
+        .filter(Boolean) as any[]
     }
-  }
-  return null
-}
-function mergePreInfo(r: RecipeIn): string | null {
-  return toText(r.pre_info || r.preinfo || r.co_wiedziec || r.notes_before || r.about || r.description_short)
-}
-function mergeProTip(r: RecipeIn): string | null {
-  const txt = toText(r.pro_tip || r.note || r.extra_tips)
-  const list = toArr(r.tips).concat(toArr(r.uwagi))
-  const merged = [txt, list.length ? '• ' + list.join('\n• ') : ''].filter(Boolean).join('\n')
-  return merged || null
-}
-function mergeTags(r: RecipeIn): string[] | null {
-  const raw = [
-    ...toArr(r.tags),
-    ...toArr(r.tag),
-    ...toArr(r.labels),
-    ...toArr(r.categories),
-    ...toArr(r.category_name),
-    ...toArr(r.cuisine),
-    ...toArr(r.course),
-    ...toArr(r.category),
-    ...toArr(r.meal_type),
-  ]
-  const cleaned = Array.from(new Set(raw.map((s) => {
-    const t = s.trim()
-    return t ? t.slice(0,1).toUpperCase() + t.slice(1) : ''
-  }).filter(Boolean)))
-  return cleaned.length ? cleaned : null
-}
-function normalizeRecipe(r: RecipeIn): RecipeOut | null {
-  const id = (r.id || r.slug || r.name || r.title)?.toString().trim()
-  const title = (r.title || r.name || id)?.toString().trim()
-  if (!id || !title) return null
 
-  const ingredients =
-    r.ingredients && (r.ingredients as any[]).length
-      ? normalizeIngredients(r.ingredients as any)
-      : normalizeIngredients(r.ingredient_list as any)
-
-  const out: RecipeOut = {
-    id, title, ingredients,
-    image: r.image ?? null,
-    // pola do filtrów
-    tags: mergeTags(r),
-    cuisine: r.cuisine ?? null,
-    course: r.course ?? null,
-    category: r.category ?? null,
-    meal_type: r.meal_type ?? null,
-    // panele i instrukcje
-    pre_info: mergePreInfo(r),
-    pro_tip: mergeProTip(r),
-    instructions: mergeInstructions(r),
-    // makra
-    nutrition: r.nutrition ?? null,
-    nutrition100: r.nutrition100 ?? null,
-  }
-  return out
-}
-
-function safeRead(filePath: string): string | null {
-  try { return fs.readFileSync(filePath, 'utf8') } catch { return null }
-}
-function loadData(): RecipeOut[] {
-  const roots = [path.join(process.cwd(), 'public'), path.join(process.cwd(), 'data'), process.cwd()]
-
-  // prefer JSON
-  for (const root of roots) {
-    const p = path.join(root, 'jemfit_recipes.json')
-    const txt = safeRead(p)
-    if (txt) {
+    if (file.endsWith('.json')) {
       try {
-        const arr = JSON.parse(txt) as RecipeIn[]
-        return arr.map(normalizeRecipe).filter(Boolean) as RecipeOut[]
-      } catch {}
+        const parsed = JSON.parse(data)
+        if (Array.isArray(parsed)) return parsed
+        if (parsed && Array.isArray(parsed.items)) return parsed.items
+        return []
+      } catch {
+        return []
+      }
     }
   }
 
-  // fallback: JSONL
-  for (const root of roots) {
-    const p = path.join(root, 'jemfit_recipes.jsonl')
-    const txt = safeRead(p)
-    if (txt) {
-      const out: RecipeOut[] = []
-      for (const line of txt.split(/\r?\n/)) {
-        const s = line.trim()
-        if (!s) continue
-        try {
-          const obj = JSON.parse(s) as RecipeIn
-          const n = normalizeRecipe(obj)
-          if (n) out.push(n)
-        } catch {}
-      }
-      return out
-    }
-  }
   return []
 }
 
-function applySort(items: RecipeOut[], sort?: string): RecipeOut[] {
-  const s = sort || 'title_asc'
-  const arr = [...items]
-  if (s === 'title_asc') arr.sort((a,b)=>a.title.localeCompare(b.title,'pl'))
-  else if (s === 'title_desc') arr.sort((a,b)=>b.title.localeCompare(a.title,'pl'))
-  else if (s === 'ingredients_asc') arr.sort((a,b)=>a.ingredients.length - b.ingredients.length)
-  else if (s === 'ingredients_desc') arr.sort((a,b)=>b.ingredients.length - a.ingredients.length)
-  return arr
+const toArr = (x: any): string[] => {
+  if (Array.isArray(x)) return x.map(String)
+  if (typeof x === 'string') return x.split(/[;,/]/).map((s) => s.trim()).filter(Boolean)
+  return []
 }
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  const all = loadData()
-  if (!all.length) return res.status(200).json({ items: [], total: 0 })
+const normTag = (s: string) => (s ? s.slice(0, 1).toUpperCase() + s.slice(1) : '')
 
-  const { id, sort, ing } = req.query as { id?: string; sort?: string; ing?: string }
+const buildTags = (r: any): string[] => {
+  const raw = [
+    ...(r.tags ?? []),
+    ...toArr(r.tag),
+    ...toArr(r.cuisine),
+    ...toArr(r.course),
+    ...toArr(r.category),
+    ...toArr(r.categories),
+    ...toArr(r.category_name),
+    ...toArr(r.meal_type),
+    ...toArr(r.labels),
+  ]
+  return Array.from(new Set(raw.map(normTag).filter(Boolean)))
+}
 
-  // GET /api/recipes?id=...
-  if (id) {
-    const item = all.find(r => r.id === id)
-    if (!item) return res.status(404).json({ error: 'Not found' })
-    return res.status(200).json({ item })
+const normalizeInstructions = (instr: any): string[] => {
+  if (!instr) return []
+  const pick = (x: any): string => {
+    if (x == null) return ''
+    if (typeof x === 'string') return x.trim()
+    if (typeof x === 'object') {
+      const cand =
+        x.text ?? x.step ?? x.content ?? x.description ??
+        Object.values(x).find(v => typeof v === 'string')
+      return (cand ? String(cand) : '').trim()
+    }
+    return String(x).trim()
   }
+  if (Array.isArray(instr)) return instr.map(pick).filter(Boolean)
 
-  // list + prosta filtracja po składnikach (?ing=a,b)
-  let items = all
-  const ingTokens = (ing ? String(ing) : '')
-    .split(',')
-    .map(s=>s.trim().toLowerCase())
-    .filter(Boolean)
-  if (ingTokens.length) {
-    items = items.filter(r => {
-      const names = r.ingredients.map(i => (i.name||'').toLowerCase())
-      return ingTokens.every(tok => names.some(n => n.includes(tok)))
+  const s = String(instr)
+  const byLine = s.split(/\r?\n+/).map(x => x.trim()).filter(Boolean)
+  if (byLine.length > 1) return byLine
+
+  return s.split(/\s*(?=\d+\.)/g).map(x => x.replace(/^\d+\.\s*/, '').trim()).filter(Boolean)
+}
+
+const normalizeNutritionPerServing = (nutrition: Nutrition): Macros => {
+  if (!nutrition) return null
+  if (Array.isArray(nutrition)) {
+    const n = nutrition.find(x => x?.basis === 'per_serving') || nutrition[0]
+    if (!n) return null
+    return { kcal: n.calories_kcal, carbs: n.carbs_g, protein: n.protein_g, fat: n.fat_g }
+  }
+  const o = nutrition as { kcal?: number; calories_kcal?: number; carbs?: number; protein?: number; fat?: number }
+  return { kcal: typeof o.kcal === 'number' ? o.kcal : o.calories_kcal, carbs: o.carbs, protein: o.protein, fat: o.fat }
+}
+
+const normalizeRecipe = (r: any): Recipe => {
+  return {
+    ...r,
+    instructions: normalizeInstructions(r.instructions),
+    tags: buildTags(r),
+    // per-serving w obiekcie `nutrition` zostawiamy w oryginale — UI ma własny helper,
+    // ale jeśli chcesz, można też dodać pole `nutrition_per_serving` tutaj.
+  }
+}
+
+// proste filtry po query (?ingredients=..., ?tag=...)
+const filterByQuery = (items: Recipe[], q: NextApiRequest['query']) => {
+  let out = items
+
+  const ingredients = typeof q.ingredients === 'string'
+    ? q.ingredients.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+    : []
+
+  if (ingredients.length) {
+    out = out.filter(rec => {
+      const names = (rec.ingredients || []).map(i => (i.name || '').toLowerCase())
+      return ingredients.every(needle => names.some(n => n.includes(needle)))
     })
   }
 
-  items = applySort(items, sort)
-  res.status(200).json({ items, total: items.length })
+  const tag = typeof q.tag === 'string' ? q.tag.trim().toLowerCase() : ''
+  if (tag) {
+    out = out.filter(rec => (buildTags(rec).map(t => t.toLowerCase()).includes(tag)))
+  }
+
+  return out
+}
+
+// ---------- Handler ----------
+
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    const raw = loadRaw()
+    let items: Recipe[] = raw.map(normalizeRecipe)
+
+    // pojedynczy przepis
+    const id = typeof req.query.id === 'string' ? req.query.id : ''
+    if (id) {
+      const item = items.find(r => r.id === id) || null
+      res.status(200).json({ item })
+      return
+    }
+
+    // opcjonalne filtry
+    items = filterByQuery(items, req.query)
+
+    res.status(200).json({ items })
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load recipes' })
+  }
 }

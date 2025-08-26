@@ -72,15 +72,29 @@ function getTags(r: Recipe): string[] {
   ]
   return Array.from(new Set(raw.map(normTag).filter(Boolean)))
 }
-function normalizeInstructions(instr?: string[] | string | null): string[] {
+function normalizeInstructions(instr?: string[] | string | any[] | null): string[] {
   if (!instr) return []
-  if (Array.isArray(instr)) return instr.map(s => String(s).trim()).filter(Boolean)
-  // jeśli przyszło jako jeden string — tnij po newline / cyfrach z kropką
+
+  const pick = (x: any): string => {
+    if (x == null) return ''
+    if (typeof x === 'string') return x.trim()
+    if (typeof x === 'object') {
+      const cand =
+        x.text ?? x.step ?? x.content ?? x.description ??
+        Object.values(x).find(v => typeof v === 'string')
+      return (cand ? String(cand) : '').trim()
+    }
+    return String(x).trim()
+  }
+
+  if (Array.isArray(instr)) return instr.map(pick).filter(Boolean)
+
   const s = String(instr)
   const byLine = s.split(/\r?\n+/).map(x => x.trim()).filter(Boolean)
   if (byLine.length > 1) return byLine
-  // fallback: split po „1.”, „2.” itp.
-  return s.split(/\s*(?:^|\n|\r|^|\.)\s*(?=\d+\.)/g).map(x => x.replace(/^\d+\.\s*/, '').trim()).filter(Boolean)
+
+  // fallback: split po "1.", "2.", ...
+  return s.split(/\s*(?=\d+\.)/g).map(x => x.replace(/^\d+\.\s*/, '').trim()).filter(Boolean)
 }
 
 export default function RecipePage() {
