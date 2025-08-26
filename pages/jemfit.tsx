@@ -5,45 +5,39 @@ import Image from 'next/image'
 
 type Ingredient = { name: string; quantity?: string | number | null; unit?: string | null }
 
-// --- Uporządkowane typy odżywki (obsługujemy 2 formaty) ---
+// --- Typy odżywki (obsługujemy 2 formaty) ---
 type NutritionArrayItem = { basis: 'per_serving'; calories_kcal?: number }
-type NutritionArray = NutritionArrayItem[]
-type NutritionObj = { kcal?: number; calories_kcal?: number } | null
-type Nutrition = NutritionArray | NutritionObj
+type Nutrition = NutritionArrayItem[] | { kcal?: number; calories_kcal?: number } | null | undefined
 
 interface Recipe {
   id: string
   title: string
   ingredients: Ingredient[]
-  tags?: string[]
+  tags?: string[] | null
   image?: string | null
-  nutrition?: Nutrition | null
+  nutrition?: Nutrition
 }
+
 interface ApiResponse { items: Recipe[]; total: number }
 
 const BRAND_RED = '#A21F1A'
 const BRAND_GREEN = '#125D49'
 const BLUR_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='
 
-// Zwraca kcal na porcję dla obu formatów nutrition
-function getKcal(nutrition: Nutrition | undefined | null): number | undefined {
+function getKcal(nutrition: Nutrition): number | undefined {
   if (!nutrition) return undefined
   if (Array.isArray(nutrition)) {
     return nutrition.find(n => n.basis === 'per_serving')?.calories_kcal
   }
-  // obiekt z API ({kcal} lub {calories_kcal})
-  if (typeof nutrition === 'object') {
-    const obj = nutrition as Record<string, unknown>
-    const kcal = (obj['kcal'] as number | undefined) ?? (obj['calories_kcal'] as number | undefined)
-    return typeof kcal === 'number' ? kcal : undefined
-  }
-  return undefined
+  const n = nutrition as { kcal?: number; calories_kcal?: number }
+  return typeof n.kcal === 'number' ? n.kcal : n.calories_kcal
 }
 
 export default function JemfitList() {
   const [raw, setRaw] = useState<Recipe[]>([])
   const [sort, setSort] = useState<'title_asc'|'title_desc'|'ingredients_asc'|'ingredients_desc'>('title_asc')
   const [error, setError] = useState<string | null>(null)
+  const [imgMap, setImgMap] = useState<Record<string, string>>({})
 
   // wyszukiwarka po składnikach (input -> AND)
   const [ingQuery, setIngQuery] = useState('')
@@ -64,6 +58,7 @@ export default function JemfitList() {
   const toggleTag = (t: string) =>
     setSelectedTags(s => s.includes(t) ? s.filter(x=>x!==t) : [...s, t])
 
+  // wczytaj listę
   useEffect(() => {
     let cancelled = false
     setError(null)
@@ -83,14 +78,23 @@ export default function JemfitList() {
     return () => { cancelled = true }
   }, [sort])
 
-  // wszystkie wybrane składniki = z inputu + z klikniętych „popularnych”
+  // wczytaj mapę obrazków
+  useEffect(() => {
+    let cancelled = false
+    fetch('/recipes_images.json')
+      .then(r => (r.ok ? r.json() : {}))
+      .then((m) => { if (!cancelled && m && typeof m === 'object') setImgMap(m as Record<string,string>) })
+      .catch(()=>{})
+    return () => { cancelled = true }
+  }, [])
+
   const allIngTokens = useMemo(
     () => Array.from(new Set([...ingTokensFromInput, ...selectedIngs.map(s=>s.toLowerCase())])),
     [ingTokensFromInput, selectedIngs]
   )
 
   const filtered = useMemo(() => {
-    return raw.filter(r => {
+    const byFilter = raw.filter(r => {
       if (selectedTags.length && !selectedTags.every(t => (r.tags||[]).includes(t))) return false
       if (allIngTokens.length) {
         const names = r.ingredients.map(i => (i.name||'').toLowerCase())
@@ -99,7 +103,15 @@ export default function JemfitList() {
       }
       return true
     })
-  }, [raw, selectedTags, allIngTokens])
+    const sorted = [...byFilter].sort((a,b) => {
+      if (sort === 'title_asc') return a.title.localeCompare(b.title, 'pl')
+      if (sort === 'title_desc') return b.title.localeCompare(a.title, 'pl')
+      if (sort === 'ingredients_asc') return a.ingredients.length - b.ingredients.length
+      if (sort === 'ingredients_desc') return b.ingredients.length - a.ingredients.length
+      return 0
+    })
+    return sorted
+  }, [raw, selectedTags, allIngTokens, sort])
 
   const facets = useMemo(() => {
     const tagCount: Record<string, number> = {}
@@ -116,12 +128,19 @@ export default function JemfitList() {
     return { tags, ings }
   }, [filtered])
 
+  const resolveImg = (r: Recipe) => {
+    const local = imgMap[r.id]
+    if (typeof local === 'string' && local.startsWith('/')) return local
+    if (r.image && (r.image.startsWith('/') || r.image.startsWith('data:') || /^https?:\/\//i.test(r.image))) return r.image
+    return '/placeholder.jpg'
+  }
+
   return (
     <main className="bg-white dark:bg-gray-900 min-h-screen">
       <Head><title>JemFit — przepisy</title></Head>
 
-      {/* >>> Większe logo w gradientowym nagłówku (użyjemy /jemfit-logo.png) <<< */}
-      <header className="w-full" style={{ background: `linear-gradient(90deg, ${BRAND_GREEN}, ${BRAND_RED})` }}>
+      {/* Nagłówek: czysty zielony brand */}
+      <header className="w-full" style={{ background: BRAND_GREEN }}>
         <div className="max-w-6xl mx-auto flex items-center gap-4 p-3">
           <div className="relative h-12 md:h-14 w-auto">
             <Image
@@ -239,12 +258,13 @@ export default function JemfitList() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map(r => {
             const kcal = getKcal(r.nutrition)
+            const imgSrc = resolveImg(r)
             return (
               <article key={r.id} className="rounded-2xl border shadow-sm overflow-hidden bg-white dark:bg-gray-800">
                 <Link href={`/jemfit/${r.id}`} className="group block">
                   <div className="relative aspect-[16/9] overflow-hidden">
                     <Image
-                      src={r.image || '/placeholder.jpg'}
+                      src={imgSrc}
                       alt={r.title}
                       fill
                       sizes="(min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw"
@@ -268,10 +288,10 @@ export default function JemfitList() {
                   <ul className="text-sm text-gray-800 dark:text-gray-100 space-y-1">
                     {r.ingredients.map((i, idx) => (
                       <li key={idx} className="flex justify-between gap-3">
-                        <span className="min-w-0">{i.name}</span>
                         <span className="text-gray-600 dark:text-gray-300 shrink-0">
                           {i.quantity}{i.unit ? ` ${i.unit}` : ''}
                         </span>
+                        <span className="min-w-0 text-right">{i.name}</span>
                       </li>
                     ))}
                   </ul>

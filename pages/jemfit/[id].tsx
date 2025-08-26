@@ -1,242 +1,265 @@
-// pages/jemfit/[id].tsx
+import { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import Image from 'next/image'
 import Link from 'next/link'
-import type { GetServerSideProps } from 'next'
-import fs from 'fs'
-import path from 'path'
+import { useRouter } from 'next/router'
 
-type JemfitNutrition = {
-  basis: 'per_serving'
-  calories_kcal?: number
-  carbs_g?: number
-  protein_g?: number
-  fat_g?: number
-}
+type Ingredient = { name: string; quantity?: string | number | null; unit?: string | null }
+type Macros = { kcal?: number; carbs?: number; protein?: number; fat?: number } | null | undefined
 
-type RecipeRaw = {
+// Akceptujemy 2 formaty per-serving (stary i nowy)
+type NutritionArrayItem = { basis: 'per_serving'; calories_kcal?: number }
+type Nutrition = NutritionArrayItem[] | { kcal?: number; calories_kcal?: number } | null | undefined
+
+interface Recipe {
   id: string
   title: string
+  ingredients: Ingredient[]
+  instructions?: string[] | null
   image?: string | null
-  ingredients: { name: string; quantity?: string | number | null; unit?: string | null }[]
-  steps?: string[] | null
-  read_before?: string[] | null
-  protip?: string | null
-  nutrition?: JemfitNutrition[] | null
+  tags?: string[] | null
+  pre_info?: string | null
+  pro_tip?: string | null
+  nutrition?: Nutrition             // na porcję (stary/nowy format)
+  nutrition100?: Macros             // na 100 g (nowy format)
 }
 
-type Macros = { kcal?: number; carbs?: number; protein?: number; fat?: number }
+const BRAND_RED = '#A21F1A'
+const BRAND_GREEN = '#125D49'
+const BLUR_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='
 
-function normalize(recipe: RecipeRaw) {
-  const perServing = (recipe.nutrition ?? []).find(n => n.basis === 'per_serving')
-  const nutrition: Macros | undefined = perServing
-    ? {
-        kcal: perServing.calories_kcal ?? undefined,
-        carbs: perServing.carbs_g ?? undefined,
-        protein: perServing.protein_g ?? undefined,
-        fat: perServing.fat_g ?? undefined,
-      }
-    : undefined
-
-  const preInfo = recipe.read_before?.filter(Boolean) ?? []
-  const proTip = recipe.protip ?? undefined
-
-  return { ...recipe, nutrition, preInfo, proTip }
+function kcalFromNutrition(nutrition: Nutrition): number | undefined {
+  if (!nutrition) return undefined
+  if (Array.isArray(nutrition)) return nutrition.find(n => n.basis === 'per_serving')?.calories_kcal
+  const o = nutrition as { kcal?: number; calories_kcal?: number }
+  return typeof o.kcal === 'number' ? o.kcal : o.calories_kcal
+}
+function normalizeMacrosPerServing(nutrition: Nutrition): Macros {
+  const kcal = kcalFromNutrition(nutrition)
+  // nie mamy pewności co do makr per serving w starym formacie -> tylko kcal jeśli brak
+  return { kcal: typeof kcal === 'number' ? kcal : undefined, carbs: undefined, protein: undefined, fat: undefined }
+}
+function fmtNum(n?: number | null, digits = 0) {
+  if (typeof n !== 'number' || Number.isNaN(n)) return '—'
+  return n.toLocaleString('pl-PL', { maximumFractionDigits: digits, minimumFractionDigits: digits })
 }
 
-export default function RecipePage({ recipe: raw }: { recipe: RecipeRaw }) {
-  const recipe = normalize(raw)
+export default function RecipePage() {
+  const router = useRouter()
+  const { id } = router.query as { id?: string }
+
+  const [data, setData] = useState<Recipe | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [imgMap, setImgMap] = useState<Record<string, string>>({})
+
+  // pobierz przepis
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+    setError(null)
+    fetch(`/api/recipes?id=${encodeURIComponent(id)}`)
+      .then(async r => {
+        if (!r.ok) throw new Error(`API /api/recipes zwróciło ${r.status}`)
+        return r.json() as Promise<{ item?: Recipe } | { items?: Recipe[] }>
+      })
+      .then(d => {
+        if (cancelled) return
+        // API może zwrócić {item} albo {items:[...]} — obsłużmy oba
+        const item = (d as any).item ?? ((d as any).items?.find?.((x: Recipe)=>x.id===id)) ?? null
+        setData(item)
+      })
+      .catch(err => {
+        console.warn(err)
+        if (!cancelled) setError('Nie udało się wczytać przepisu.')
+      })
+    return () => { cancelled = true }
+  }, [id])
+
+  // mapa obrazków
+  useEffect(() => {
+    let cancelled = false
+    fetch('/recipes_images.json')
+      .then(r => (r.ok ? r.json() : {}))
+      .then((m) => { if (!cancelled && m && typeof m === 'object') setImgMap(m as Record<string,string>) })
+      .catch(()=>{})
+    return () => { cancelled = true }
+  }, [])
+
+  const imgSrc = useMemo(() => {
+    if (!data) return '/placeholder.jpg'
+    const local = imgMap[data.id]
+    if (typeof local === 'string' && local.startsWith('/')) return local
+    if (data.image && (data.image.startsWith('/') || data.image.startsWith('data:') || /^https?:\/\//i.test(data.image))) return data.image
+    return '/placeholder.jpg'
+  }, [data, imgMap])
+
+  const perServing: Macros = useMemo(() => {
+    // Jeśli nowe API daje pełne makra per serving, przyjmijmy że są pod nutrition.{kcal,carbs,protein,fat}
+    // ale mamy tylko kcal pewne — więc pokażemy kcal na pewno, makra jeśli są (lub zostaną wyliczone w przyszłości)
+    const base = normalizeMacrosPerServing(data?.nutrition)
+    return base
+  }, [data?.nutrition])
+
+  const per100: Macros = data?.nutrition100
 
   return (
-    <>
-      <Head>
-        <title>{recipe.title} — JemFit</title>
-      </Head>
+    <main className="bg-white dark:bg-gray-900 min-h-screen">
+      <Head><title>{data?.title ? `${data.title} — JemFit` : 'Przepis — JemFit'}</title></Head>
 
-      <article className="container mx-auto max-w-5xl px-4 py-8 grid gap-8 md:grid-cols-[1fr_320px]">
-        {/* LEWA KOLUMNA */}
-        <section>
-          <Link href="/jemfit" className="text-sm text-gray-500 hover:underline">
-            ← Powrót
+      {/* Nagłówek */}
+      <header className="w-full" style={{ background: BRAND_GREEN }}>
+        <div className="max-w-4xl mx-auto flex items-center gap-4 p-3">
+          <Link href="/jemfit" className="inline-flex items-center gap-2 text-white/90 hover:text-white">
+            ← Wróć do listy
           </Link>
-          <h1 className="mt-2 text-3xl font-extrabold">{recipe.title}</h1>
-
-          {recipe.image && (
-            <div className="mt-4 relative w-full h-72">
-              <Image
-                src={recipe.image}
-                alt={recipe.title}
-                fill
-                className="object-cover rounded-lg"
-              />
-            </div>
-          )}
-
-          {/* Co warto wiedzieć */}
-          {!!recipe.preInfo?.length && (
-            <div className="mt-6 card">
-              <div className="card-body">
-                <h2 className="font-semibold text-lg mb-2">Co warto wiedzieć</h2>
-                <ul className="list-disc pl-5 space-y-1">
-                  {recipe.preInfo.map((info, idx) => (
-                    <li key={idx}>{info}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
-
-          {/* Pro tip */}
-          {recipe.proTip && (
-            <div className="mt-6 card border-orange-400">
-              <div className="card-body">
-                <h2 className="font-semibold text-lg mb-2 text-orange-500">Pro tip 💡</h2>
-                <p>{recipe.proTip}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Składniki */}
-          <div className="mt-6 card">
-            <div className="card-body">
-              <h2 className="font-semibold text-lg mb-2">Składniki</h2>
-              <ul className="list-disc pl-5 space-y-1">
-                {recipe.ingredients.map((i, idx) => (
-                  <li key={idx}>
-                    {i.quantity ? `${i.quantity} ${i.unit ?? ''} ` : ''}{i.name}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Kroki */}
-          {recipe.steps && (
-            <div className="mt-6 card">
-              <div className="card-body">
-                <h2 className="font-semibold text-lg mb-2">Przygotowanie</h2>
-                <ol className="list-decimal pl-5 space-y-2">
-                  {recipe.steps.map((step, idx) => (
-                    <li key={idx}>{step}</li>
-                  ))}
-                </ol>
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* PRAWA KOLUMNA */}
-        <aside className="space-y-6">
-          {/* Logo Jemfit */}
-          <div className="flex justify-center">
+          <div className="ml-auto relative h-10 w-auto">
             <Image
-              src="/jemfit-logo2.png"
-              alt="JemFit logo"
-              width={220}
-              height={88}
-              className="object-contain"
+              src="/jemfit-logo.png"
+              alt="JemFit"
+              width={180}
+              height={46}
+              className="h-10 w-auto object-contain"
               priority
             />
           </div>
+        </div>
+      </header>
 
-          {recipe.nutrition && (
-            <div className="card">
-              <div className="card-body">
-                <h2 className="font-semibold text-lg mb-2">Wartość odżywcza (na porcję)</h2>
-                <ul className="space-y-1 text-sm">
-                  <li>Kalorie: {recipe.nutrition.kcal ?? '—'} kcal</li>
-                  <li>Węglowodany: {recipe.nutrition.carbs ?? '—'} g</li>
-                  <li>Białko: {recipe.nutrition.protein ?? '—'} g</li>
-                  <li>Tłuszcz: {recipe.nutrition.fat ?? '—'} g</li>
-                </ul>
+      <div className="max-w-4xl mx-auto p-4">
+        {error && (
+          <div className="text-sm text-red-600 dark:text-red-400 mt-4">
+            {error} <Link href="/jemfit" className="underline">Wróć do listy</Link>
+          </div>
+        )}
+
+        {!data && !error && (
+          <div className="text-sm text-gray-600 dark:text-gray-300 mt-4">Wczytywanie…</div>
+        )}
+
+        {data && (
+          <>
+            {/* Tytuł + małe zdjęcie po prawej */}
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{data.title}</h1>
+              <div className="relative w-full sm:w-56 h-40 sm:h-40 rounded-xl overflow-hidden border">
+                <Image
+                  src={imgSrc}
+                  alt={data.title}
+                  fill
+                  sizes="224px"
+                  placeholder="blur"
+                  blurDataURL={BLUR_PIXEL}
+                  className="object-cover"
+                />
               </div>
             </div>
-          )}
-        </aside>
-      </article>
-    </>
+
+            {/* Tagi */}
+            {!!(data.tags && data.tags.length) && (
+              <div className="flex flex-wrap gap-2 mb-6">
+                {data.tags.map(t => (
+                  <span
+                    key={t}
+                    className="text-[11px] px-2 py-1 rounded-full border"
+                    style={{ borderColor: BRAND_GREEN, color: BRAND_GREEN, background: BRAND_GREEN + '10' }}
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Panele info */}
+            {(data.pre_info || data.pro_tip) && (
+              <div className="grid sm:grid-cols-2 gap-4 mb-6">
+                {data.pre_info && (
+                  <section className="rounded-2xl border p-4" style={{ borderColor: BRAND_GREEN + '33' }}>
+                    <h2 className="font-medium mb-2" style={{ color: BRAND_GREEN }}>Co wiedzieć przed przygotowaniem</h2>
+                    <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line">{data.pre_info}</p>
+                  </section>
+                )}
+                {data.pro_tip && (
+                  <section className="rounded-2xl border p-4" style={{ borderColor: BRAND_RED + '33' }}>
+                    <h2 className="font-medium mb-2" style={{ color: BRAND_RED }}>Pro tip</h2>
+                    <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line">{data.pro_tip}</p>
+                  </section>
+                )}
+              </div>
+            )}
+
+            {/* Makra / kalorie */}
+            <div className="grid sm:grid-cols-2 gap-4 mb-8">
+              <section className="rounded-2xl border p-4" style={{ borderColor: BRAND_GREEN + '33' }}>
+                <h3 className="font-medium mb-3" style={{ color: BRAND_GREEN }}>Na porcję</h3>
+                <dl className="grid grid-cols-2 gap-y-2 text-sm">
+                  <dt className="text-gray-600 dark:text-gray-300">Kalorie</dt>
+                  <dd className="text-right font-semibold">{fmtNum(perServing?.kcal)} kcal</dd>
+
+                  <dt className="text-gray-600 dark:text-gray-300">Węgle</dt>
+                  <dd className="text-right">{fmtNum(perServing?.carbs, 1)} g</dd>
+
+                  <dt className="text-gray-600 dark:text-gray-300">Białko</dt>
+                  <dd className="text-right">{fmtNum(perServing?.protein, 1)} g</dd>
+
+                  <dt className="text-gray-600 dark:text-gray-300">Tłuszcz</dt>
+                  <dd className="text-right">{fmtNum(perServing?.fat, 1)} g</dd>
+                </dl>
+              </section>
+
+              <section className="rounded-2xl border p-4" style={{ borderColor: BRAND_RED + '33' }}>
+                <h3 className="font-medium mb-3" style={{ color: BRAND_RED }}>Na 100 g</h3>
+                <dl className="grid grid-cols-2 gap-y-2 text-sm">
+                  <dt className="text-gray-600 dark:text-gray-300">Kalorie</dt>
+                  <dd className="text-right font-semibold">{fmtNum(per100?.kcal)} kcal</dd>
+
+                  <dt className="text-gray-600 dark:text-gray-300">Węgle</dt>
+                  <dd className="text-right">{fmtNum(per100?.carbs, 1)} g</dd>
+
+                  <dt className="text-gray-600 dark:text-gray-300">Białko</dt>
+                  <dd className="text-right">{fmtNum(per100?.protein, 1)} g</dd>
+
+                  <dt className="text-gray-600 dark:text-gray-300">Tłuszcz</dt>
+                  <dd className="text-right">{fmtNum(per100?.fat, 1)} g</dd>
+                </dl>
+              </section>
+            </div>
+
+            {/* Składniki */}
+            <section className="mb-8">
+              <h2 className="font-medium mb-3">Składniki</h2>
+              <ul className="text-sm text-gray-800 dark:text-gray-100 space-y-1">
+                {data.ingredients.map((i, idx) => (
+                  <li key={idx} className="flex justify-between gap-3">
+                    <span className="text-gray-600 dark:text-gray-300 shrink-0">
+                      {i.quantity}{i.unit ? ` ${i.unit}` : ''}
+                    </span>
+                    <span className="min-w-0 text-right">{i.name}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            {/* Instrukcje */}
+            {!!(data.instructions && data.instructions.length) && (
+              <section className="mb-12">
+                <h2 className="font-medium mb-3">Przygotowanie</h2>
+                <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-800 dark:text-gray-100">
+                  {data.instructions.map((step, idx) => (
+                    <li key={idx} className="whitespace-pre-line">{step}</li>
+                  ))}
+                </ol>
+              </section>
+            )}
+
+            <div className="mt-8">
+              <Link href="/jemfit" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border"
+                style={{ borderColor: BRAND_GREEN, color: BRAND_GREEN }}>
+                ← Wróć do listy
+              </Link>
+            </div>
+          </>
+        )}
+      </div>
+    </main>
   )
-}
-
-// ---- SSR: wczytaj dane z pliku JSONL/JSON (bez 500) ----
-export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const id = String(ctx.params?.id || '')
-  const cwd = process.cwd()
-
-  // Spróbuj kilku ścieżek (Vercel/Local) i formatów (JSONL/JSON)
-  const candidates = [
-    path.join(cwd, 'public', 'data', 'jemfit_recipes.jsonl'),
-    path.join(cwd, 'public', 'jemfit_recipes.jsonl'),
-    path.join(cwd, 'public', 'data', 'jemfit_recipes.json'),
-    path.join(cwd, 'public', 'jemfit_recipes.json'),
-  ]
-
-  let content: string | null = null
-  let from: 'jsonl' | 'json' | null = null
-
-  for (const p of candidates) {
-    try {
-      if (fs.existsSync(p)) {
-        content = fs.readFileSync(p, 'utf8')
-        from = p.endsWith('.jsonl') ? 'jsonl' : 'json'
-        break
-      }
-    } catch (e) {
-      // pomiń i próbuj dalej
-    }
-  }
-
-  // Fallback: pobierz przez HTTP z /data (działa na Vercel nawet bez fs)
-  if (!content) {
-    try {
-      const host = ctx.req.headers.host
-      const proto = (ctx.req.headers['x-forwarded-proto'] as string) || 'http'
-      const base = `${proto}://${host}`
-      const urls = ['/data/jemfit_recipes.jsonl', '/jemfit_recipes.jsonl', '/data/jemfit_recipes.json', '/jemfit_recipes.json']
-      for (const u of urls) {
-        const res = await fetch(`${base}${u}`)
-        if (res.ok) {
-          content = await res.text()
-          from = u.endsWith('.jsonl') ? 'jsonl' : 'json'
-          break
-        }
-      }
-    } catch {
-      // zignoruj – obsłużymy niżej
-    }
-  }
-
-  if (!content || !from) {
-    // brak danych – pokaż 404 zamiast 500
-    return { notFound: true }
-  }
-
-  let recipes: RecipeRaw[] = []
-  try {
-    if (from === 'jsonl') {
-      recipes = content
-        .split(/\r?\n/)
-        .map(l => l.trim())
-        .filter(Boolean)
-        .map(l => JSON.parse(l))
-    } else {
-      recipes = JSON.parse(content)
-    }
-  } catch (e) {
-    // jeżeli JSON ma śmieci na końcu – przefiltruj po kolei linie
-    try {
-      recipes = content
-        .split(/\r?\n/)
-        .map(l => l.trim())
-        .filter(Boolean)
-        .map(l => JSON.parse(l))
-    } catch {
-      return { notFound: true }
-    }
-  }
-
-  const recipe = recipes.find(r => String(r.id) === id) || null
-  if (!recipe) return { notFound: true }
-
-  return { props: { recipe } }
 }
