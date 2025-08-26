@@ -3,13 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 
 type Ingredient = { name: string; quantity?: string | number | null; unit?: string | null }
-interface Recipe {
-  id: string
-  title: string
-  ingredients: Ingredient[]
-  tags?: string[]
-  image?: string | null
-}
+interface Recipe { id: string; title: string; ingredients: Ingredient[]; tags?: string[]; image?: string | null }
 interface ApiResponse { items: Recipe[]; total: number }
 
 const BRAND_RED = '#A21F1A'
@@ -19,48 +13,52 @@ export default function JemfitList() {
   const [raw, setRaw] = useState<Recipe[]>([])
   const [sort, setSort] = useState<'title_asc'|'title_desc'|'ingredients_asc'|'ingredients_desc'>('title_asc')
 
-  // wyszukiwarka po składnikach
-  const [ingQuery, setIngQuery] = useState('')             // wpis: "pomidor, ryż"
-  const ingTokens = useMemo(
+  // wyszukiwarka po składnikach (input -> AND)
+  const [ingQuery, setIngQuery] = useState('')
+  const ingTokensFromInput = useMemo(
     () => ingQuery.split(',').map(s => s.trim().toLowerCase()).filter(Boolean),
     [ingQuery]
   )
+  // klikane popularne składniki (toggle jak tagi)
+  const [selectedIngs, setSelectedIngs] = useState<string[]>([])
+  const toggleIng = (n: string) =>
+    setSelectedIngs(s => s.includes(n) ? s.filter(x=>x!==n) : [...s, n])
 
-  // wybór tagów
+  // tagi
   const [tagOpen, setTagOpen] = useState(true)
   const [ingOpen, setIngOpen] = useState(false)
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const toggleTag = (t: string) =>
+    setSelectedTags(s => s.includes(t) ? s.filter(x=>x!==t) : [...s, t])
 
-  useEffect(() => {
-    fetch(`/api/recipes?sort=${sort}`).then(r => r.json()).then((d: ApiResponse) => {
-      setRaw(d.items || [])
-    })
-  }, [sort])
+  useEffect(() => { fetch(`/api/recipes?sort=${sort}`).then(r=>r.json()).then((d:ApiResponse)=>setRaw(d.items||[])) }, [sort])
 
-  // filtrowanie po składnikach (AND) i tagach (AND)
+  // wszystkie wybrane składniki = z inputu + z klikniętych „popularnych”
+  const allIngTokens = useMemo(
+    () => Array.from(new Set([...ingTokensFromInput, ...selectedIngs.map(s=>s.toLowerCase())])),
+    [ingTokensFromInput, selectedIngs]
+  )
+
   const filtered = useMemo(() => {
     return raw.filter(r => {
-      // tagi: każdy wybrany tag musi być w przepisie
-      if (selectedTags.length && !selectedTags.every(t => (r.tags || []).includes(t))) return false
-      // składniki: każdy token musi się znaleźć w nazwie jakiegoś składnika (case-insensitive, substring)
-      if (ingTokens.length) {
-        const names = r.ingredients.map(i => (i.name || '').toLowerCase())
-        const ok = ingTokens.every(tok => names.some(n => n.includes(tok)))
+      if (selectedTags.length && !selectedTags.every(t => (r.tags||[]).includes(t))) return false
+      if (allIngTokens.length) {
+        const names = r.ingredients.map(i => (i.name||'').toLowerCase())
+        const ok = allIngTokens.every(tok => names.some(n => n.includes(tok)))
         if (!ok) return false
       }
       return true
     })
-  }, [raw, selectedTags, ingTokens])
+  }, [raw, selectedTags, allIngTokens])
 
-  // facety liczone po przefiltrowanych danych (żeby liczby „żyły” z filtrami)
   const facets = useMemo(() => {
     const tagCount: Record<string, number> = {}
     const ingCount: Record<string, number> = {}
     for (const r of filtered) {
-      for (const t of (r.tags || [])) tagCount[t] = (tagCount[t] || 0) + 1
+      for (const t of (r.tags||[])) tagCount[t] = (tagCount[t]||0)+1
       for (const i of r.ingredients) {
-        const n = (i.name || '').toLowerCase().trim()
-        if (n) ingCount[n] = (ingCount[n] || 0) + 1
+        const n = (i.name||'').toLowerCase().trim()
+        if (n) ingCount[n] = (ingCount[n]||0)+1
       }
     }
     const tags = Object.entries(tagCount).sort((a,b)=>b[1]-a[1])
@@ -68,15 +66,10 @@ export default function JemfitList() {
     return { tags, ings }
   }, [filtered])
 
-  // UI helpers
-  const toggleTag = (t: string) =>
-    setSelectedTags(s => s.includes(t) ? s.filter(x=>x!==t) : [...s, t])
-
   return (
     <main className="bg-white min-h-screen">
       <Head><title>JemFit — przepisy</title></Head>
 
-      {/* Top bar (brand) */}
       <header className="w-full" style={{ background: `linear-gradient(90deg, ${BRAND_GREEN}, ${BRAND_RED})` }}>
         <div className="max-w-6xl mx-auto flex items-center gap-4 p-3">
           <img src="/jemfit-logo.png" alt="JemFit" className="h-8" />
@@ -85,46 +78,29 @@ export default function JemfitList() {
       </header>
 
       <div className="max-w-6xl mx-auto p-4">
-        {/* Controls */}
-        <div className="rounded-2xl border p-4 mb-4 flex flex-col md:flex-row gap-3 items-end"
-             style={{ borderColor: BRAND_GREEN + '33' }}>
+        {/* Kontrolki */}
+        <div className="rounded-2xl border p-4 mb-4 flex flex-col md:flex-row gap-3 items-end" style={{ borderColor: BRAND_GREEN + '33' }}>
           <label className="flex-1">
             <span className="block text-sm font-medium mb-1">Szukaj po składnikach (oddziel przecinkami)</span>
-            <input
-              className="w-full rounded-xl border px-3 py-2"
-              placeholder="np. pomidor, ryż, bazylia"
-              value={ingQuery}
-              onChange={e => setIngQuery(e.target.value)}
-            />
+            <input className="w-full rounded-xl border px-3 py-2" placeholder="np. pomidor, ryż, bazylia" value={ingQuery} onChange={e=>setIngQuery(e.target.value)} />
           </label>
-
           <label>
             <span className="block text-sm font-medium mb-1">Sortowanie</span>
-            <select
-              className="w-full rounded-xl border px-3 py-2"
-              value={sort}
-              onChange={e => setSort(e.target.value as any)}
-            >
+            <select className="w-full rounded-xl border px-3 py-2" value={sort} onChange={e=>setSort(e.target.value as any)}>
               <option value="title_asc">Tytuł A→Z</option>
               <option value="title_desc">Tytuł Z→A</option>
               <option value="ingredients_asc">Mniej składników</option>
               <option value="ingredients_desc">Więcej składników</option>
             </select>
           </label>
-
-          <div className="text-sm text-gray-600 md:ml-auto">
-            {filtered.length} / {raw.length} przepisów
-          </div>
+          <div className="text-sm text-gray-600 md:ml-auto">{filtered.length} / {raw.length} przepisów</div>
         </div>
 
-        {/* Facets (accordion) */}
+        {/* Facety (accordion) */}
         <div className="grid md:grid-cols-2 gap-4 mb-6">
           {/* TAGI */}
           <section className="rounded-2xl border" style={{ borderColor: BRAND_GREEN + '33' }}>
-            <button
-              className="w-full flex justify-between items-center px-4 py-3"
-              onClick={() => setTagOpen(o => !o)}
-            >
+            <button className="w-full flex justify-between items-center px-4 py-3" onClick={() => setTagOpen(o=>!o)}>
               <h2 className="font-medium">Tagi</h2>
               <span className="text-sm" style={{ color: BRAND_GREEN }}>{tagOpen ? '−' : '+'}</span>
             </button>
@@ -152,45 +128,46 @@ export default function JemfitList() {
                 </div>
                 {selectedTags.length > 0 && (
                   <div className="mt-2 text-xs text-gray-600">
-                    Aktywne: {selectedTags.join(', ')} ·{' '}
-                    <button onClick={() => setSelectedTags([])} className="underline">wyczyść</button>
+                    Aktywne: {selectedTags.join(', ')} · <button onClick={()=>setSelectedTags([])} className="underline">wyczyść</button>
                   </div>
                 )}
               </div>
             )}
           </section>
 
-          {/* POPULARNE SKŁADNIKI (read-only podgląd, żeby podpowiadać frazy) */}
+          {/* POPULARNE SKŁADNIKI — toggle jak tagi (NIE zmienia sortowania) */}
           <section className="rounded-2xl border" style={{ borderColor: BRAND_RED + '33' }}>
-            <button
-              className="w-full flex justify-between items-center px-4 py-3"
-              onClick={() => setIngOpen(o => !o)}
-            >
+            <button className="w-full flex justify-between items-center px-4 py-3" onClick={() => setIngOpen(o=>!o)}>
               <h2 className="font-medium">Popularne składniki</h2>
               <span className="text-sm" style={{ color: BRAND_RED }}>{ingOpen ? '−' : '+'}</span>
             </button>
             {ingOpen && (
               <div className="p-3 pt-0">
                 <div className="flex flex-wrap gap-2 max-h-48 overflow-auto pr-1">
-                  {facets.ings.slice(0, 100).map(([name, count]) => (
-                    <button
-                      key={name}
-                      onClick={() => {
-                        // dopisz token do pola wyszukiwania (unikaj duplikatów)
-                        setIngQuery(q => {
-                          const tokens = q.split(',').map(s => s.trim()).filter(Boolean)
-                          if (!tokens.map(t=>t.toLowerCase()).includes(name.toLowerCase())) tokens.push(name)
-                          return tokens.join(', ')
-                        })
-                      }}
-                      className="text-xs px-2 py-1 rounded-full border"
-                      style={{ borderColor: BRAND_RED, color: BRAND_RED }}
-                      title={`${count} przepisów`}
-                    >
-                      {name} <span className="opacity-60">({count})</span>
-                    </button>
-                  ))}
+                  {facets.ings.slice(0,100).map(([name, count]) => {
+                    const active = selectedIngs.includes(name)
+                    return (
+                      <button
+                        key={name}
+                        onClick={() => toggleIng(name)}
+                        className="text-xs px-2 py-1 rounded-full border"
+                        style={{
+                          borderColor: active ? BRAND_RED : '#e5e7eb',
+                          background: active ? BRAND_RED + '10' : 'white',
+                          color: active ? BRAND_RED : '#111827'
+                        }}
+                        title={`${count} przepisów`}
+                      >
+                        {name} <span className="opacity-60">({count})</span>
+                      </button>
+                    )
+                  })}
                 </div>
+                {selectedIngs.length > 0 && (
+                  <div className="mt-2 text-xs text-gray-600">
+                    Aktywne: {selectedIngs.join(', ')} · <button onClick={()=>setSelectedIngs([])} className="underline">wyczyść</button>
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -208,20 +185,14 @@ export default function JemfitList() {
                 <h2 className="font-semibold mb-2 text-lg">
                   <Link href={`/jemfit/${r.id}`} className="hover:underline">{r.title}</Link>
                 </h2>
-
-                {/* Składniki: bez kropek, ilość po prawej */}
                 <ul className="text-sm text-gray-800 space-y-1">
                   {r.ingredients.map((i, idx) => (
                     <li key={idx} className="flex justify-between gap-3">
                       <span className="min-w-0">{i.name}</span>
-                      <span className="text-gray-600 shrink-0">
-                        {i.quantity}{i.unit ? ` ${i.unit}` : ''}
-                      </span>
+                      <span className="text-gray-600 shrink-0">{i.quantity}{i.unit ? ` ${i.unit}` : ''}</span>
                     </li>
                   ))}
                 </ul>
-
-                {/* Tagi przepisu (klik dodaje do filtra) */}
                 {!!(r.tags && r.tags.length) && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {r.tags.slice(0, 8).map(t => {
@@ -250,7 +221,7 @@ export default function JemfitList() {
 
         {filtered.length === 0 && (
           <div className="text-sm text-gray-600 mt-8">
-            Brak wyników dla tych filtrów. <button className="underline" onClick={() => { setIngQuery(''); setSelectedTags([]) }}>Wyczyść filtry</button>
+            Brak wyników. <button className="underline" onClick={()=>{ setIngQuery(''); setSelectedTags([]); setSelectedIngs([]) }}>Wyczyść filtry</button>
           </div>
         )}
       </div>

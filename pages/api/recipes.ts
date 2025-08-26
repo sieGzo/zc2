@@ -9,12 +9,19 @@ type Ingredient = {
   unit?: string | null
 }
 
+type Macros = { kcal?: number; carbs?: number; protein?: number; fat?: number }
+
 export type Recipe = {
   id: string
   title: string
   ingredients: Ingredient[]
   instructions?: string[] | null
-  nutrition?: { kcal?: number; carbs?: number; protein?: number; fat?: number } | null
+  // ★ makra: per serving / per 100g
+  nutrition?: Macros | null
+  nutrition100?: Macros | null
+  // ★ meta
+  pre_info?: string | null
+  pro_tip?: string | null
   cuisine?: string | null
   prep_time?: string | number | null
   tags?: string[]
@@ -23,14 +30,14 @@ export type Recipe = {
 
 const norm = (s?: string) => (s || '').toLowerCase()
 
-// mapa obrazków lokalnych
+// ===== lokalna mapa obrazków (z /public/recipes_images.json) =====
 let IMAGE_MAP: Record<string, string> = {}
 try {
   const p = path.join(process.cwd(), 'public', 'recipes_images.json')
   if (fs.existsSync(p)) IMAGE_MAP = JSON.parse(fs.readFileSync(p, 'utf8'))
 } catch {}
 
-// --- tagi
+// ===== tagi (lekko) =====
 const MEAT = ['kurczak','wołowina','wieprzowina','indyk','łosoś','tuńczyk','ryba']
 const DAIRY = ['mleko','jogurt','śmietana','masło','ser','twaro']
 const GLUTEN = ['mąka','pszen','makaron','pieczywo']
@@ -55,23 +62,33 @@ function autoTags(title: string, ingredients: Ingredient[]): string[] {
   return Array.from(tags)
 }
 
-function normalizeNutrition(n?: Record<string, any> | null) {
-  if (!n) return null
-  const pick = (keys: string[]) => {
-    for (const k of keys) {
-      const v = n[k] ?? n[k.toLowerCase()] ?? n[k.toUpperCase()]
-      if (v !== undefined && v !== null && v !== '') return Number(v)
-    }
-    return undefined
+// ===== makra =====
+function pickNum(n: any, keys: string[]): number | undefined {
+  for (const k of keys) {
+    const v = n?.[k] ?? n?.[k.toLowerCase()] ?? n?.[k.toUpperCase()]
+    if (v !== undefined && v !== null && v !== '') return Number(v)
   }
+  return undefined
+}
+function normMacros(n?: Record<string, any> | null): Macros | null {
+  if (!n) return null
   return {
-    kcal: pick(['kcal','calories','energia']),
-    carbs: pick(['carbs','w','węglowodany']),
-    protein: pick(['protein','b','białko']),
-    fat: pick(['fat','t','tłuszcz']),
+    kcal: pickNum(n, ['kcal','calories','energia','energy_kcal']),
+    carbs: pickNum(n, ['carbs','w','węglowodany','weglowodany','carbohydrates']),
+    protein: pickNum(n, ['protein','b','białko','bialko']),
+    fat: pickNum(n, ['fat','t','tłuszcz','tluszcz']),
   }
 }
+// spróbuj znaleźć strukturę makr dla 100 g i dla porcji
+function extractMacros(obj: any) {
+  // per portion / serving
+  const perServ = obj.nutrition_per_serving ?? obj.per_serving ?? obj.na_porcje ?? obj['na_porcję'] ?? obj.nutrition ?? null
+  // per 100g
+  const per100 = obj.nutrition_per_100g ?? obj.per100g ?? obj.per_100g ?? obj['na_100g'] ?? obj['per_100_g'] ?? null
+  return { nutrition: normMacros(perServ), nutrition100: normMacros(per100) }
+}
 
+// ===== obrazek =====
 function extractImage(obj: any): string | null {
   const cands = [
     obj.image, obj.img, obj.photo, obj.image_url, obj.imageUrl, obj.picture,
@@ -81,47 +98,64 @@ function extractImage(obj: any): string | null {
   return null
 }
 
+// ===== instrukcje => string[] =====
 function normalizeInstructions(obj: any): string[] | null {
   const candidates = [obj.instructions, obj.steps, obj.directions, obj.opis]
-  let src: any = candidates.find(x => !!x)
+  let src: any = candidates.find(Boolean)
   if (!src) return null
   if (typeof src === 'string') return [src]
   if (Array.isArray(src)) {
     return src.map((item) => {
       if (!item) return null
       if (typeof item === 'string') return item
-      if (typeof item === 'object') return item.instruction ?? item.text ?? item.step ?? null
+      if (typeof item === 'object') return item.instruction ?? item.text ?? item.step ?? item.content ?? item.description ?? null
       return String(item)
     }).filter(Boolean) as string[]
   }
   if (typeof src === 'object') {
-    return [src.instruction ?? src.text ?? src.content ?? src.description].filter(Boolean) as string[]
+    const s = src.instruction ?? src.text ?? src.content ?? src.description
+    return s ? [s] : null
   }
   return null
 }
 
-// cache
+// ===== meta: co wiedzieć + pro tip =====
+function extractPreInfo(obj: any): string | null {
+  return obj.pre_info ?? obj.co_wiedziec ?? obj['co_wiedzieć'] ?? obj.know_before ?? obj.notes ?? obj.uwagi ?? null
+}
+function extractProTip(obj: any): string | null {
+  return obj.pro_tip ?? obj.protip ?? obj.tip ?? obj.wskazowka ?? obj['wskazówka'] ?? obj.porada ?? null
+}
+
+// ===== cache =====
 let CACHE: { items: Recipe[] } | null = null
 
 function parseJSONL(filePath: string): Recipe[] {
   const raw = fs.readFileSync(filePath, 'utf8')
-  return raw.split(/\n+/).filter(Boolean).map((line, idx) => {
+  const lines = raw.split(/\n+/).filter(Boolean)
+  const items: Recipe[] = []
+  lines.forEach((line, idx) => {
     const obj = JSON.parse(line)
     const id = obj.id?.toString() ?? String(idx)
+    const { nutrition, nutrition100 } = extractMacros(obj)
     const rec: Recipe = {
       id,
       title: obj.title,
       ingredients: Array.isArray(obj.ingredients) ? obj.ingredients : [],
       instructions: normalizeInstructions(obj),
-      nutrition: normalizeNutrition(obj.nutrition ?? null),
+      nutrition,
+      nutrition100,
+      pre_info: extractPreInfo(obj),
+      pro_tip: extractProTip(obj),
       cuisine: obj.cuisine ?? null,
       prep_time: obj.prep_time ?? obj.total_time ?? null,
-      tags: obj.tags ?? [],
+      tags: Array.isArray(obj.tags) ? obj.tags : [],
       image: IMAGE_MAP[id] ?? extractImage(obj),
     }
     rec.tags = Array.from(new Set([...(rec.tags ?? []), ...autoTags(rec.title, rec.ingredients)]))
-    return rec
+    items.push(rec)
   })
+  return items
 }
 
 function loadData() {
