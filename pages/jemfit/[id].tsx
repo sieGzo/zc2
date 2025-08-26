@@ -6,8 +6,6 @@ import { useRouter } from 'next/router'
 
 type Ingredient = { name: string; quantity?: string | number | null; unit?: string | null }
 type Macros = { kcal?: number; carbs?: number; protein?: number; fat?: number } | null | undefined
-
-// Akceptujemy 2 formaty per-serving (stary i nowy)
 type NutritionArrayItem = { basis: 'per_serving'; calories_kcal?: number }
 type Nutrition = NutritionArrayItem[] | { kcal?: number; calories_kcal?: number } | null | undefined
 
@@ -22,6 +20,10 @@ interface Recipe {
   pro_tip?: string | null
   nutrition?: Nutrition             // na porcję (stary/nowy format)
   nutrition100?: Macros             // na 100 g (nowy format)
+  cuisine?: string | string[] | null
+  course?: string | string[] | null
+  category?: string | string[] | null
+  meal_type?: string | string[] | null
 }
 
 const BRAND_RED = '#A21F1A'
@@ -36,12 +38,29 @@ function kcalFromNutrition(nutrition: Nutrition): number | undefined {
 }
 function normalizeMacrosPerServing(nutrition: Nutrition): Macros {
   const kcal = kcalFromNutrition(nutrition)
-  // nie mamy pewności co do makr per serving w starym formacie -> tylko kcal jeśli brak
   return { kcal: typeof kcal === 'number' ? kcal : undefined, carbs: undefined, protein: undefined, fat: undefined }
 }
 function fmtNum(n?: number | null, digits = 0) {
   if (typeof n !== 'number' || Number.isNaN(n)) return '—'
   return n.toLocaleString('pl-PL', { maximumFractionDigits: digits, minimumFractionDigits: digits })
+}
+
+// tag helper (jak na liście)
+function toArr(x: unknown): string[] {
+  if (Array.isArray(x)) return x.map(String)
+  if (typeof x === 'string') return x.split(/[;,/]/).map(s=>s.trim()).filter(Boolean)
+  return []
+}
+function normTag(s: string) { return s ? s.slice(0,1).toUpperCase() + s.slice(1) : '' }
+function getTags(r: Recipe): string[] {
+  const raw = [
+    ...(r.tags || []),
+    ...toArr(r.cuisine),
+    ...toArr(r.course),
+    ...toArr(r.category),
+    ...toArr(r.meal_type),
+  ]
+  return Array.from(new Set(raw.map(normTag).filter(Boolean)))
 }
 
 export default function RecipePage() {
@@ -64,12 +83,10 @@ export default function RecipePage() {
       })
       .then(d => {
         if (cancelled) return
-        // API może zwrócić {item} albo {items:[...]} — obsłużmy oba
         const item = (d as any).item ?? ((d as any).items?.find?.((x: Recipe)=>x.id===id)) ?? null
         setData(item)
       })
-      .catch(err => {
-        console.warn(err)
+      .catch(() => {
         if (!cancelled) setError('Nie udało się wczytać przepisu.')
       })
     return () => { cancelled = true }
@@ -93,14 +110,9 @@ export default function RecipePage() {
     return '/placeholder.jpg'
   }, [data, imgMap])
 
-  const perServing: Macros = useMemo(() => {
-    // Jeśli nowe API daje pełne makra per serving, przyjmijmy że są pod nutrition.{kcal,carbs,protein,fat}
-    // ale mamy tylko kcal pewne — więc pokażemy kcal na pewno, makra jeśli są (lub zostaną wyliczone w przyszłości)
-    const base = normalizeMacrosPerServing(data?.nutrition)
-    return base
-  }, [data?.nutrition])
-
+  const perServing: Macros = useMemo(() => normalizeMacrosPerServing(data?.nutrition), [data?.nutrition])
   const per100: Macros = data?.nutrition100
+  const tags = getTags(data || ({} as any))
 
   return (
     <main className="bg-white dark:bg-gray-900 min-h-screen">
@@ -155,9 +167,9 @@ export default function RecipePage() {
             </div>
 
             {/* Tagi */}
-            {!!(data.tags && data.tags.length) && (
+            {!!tags.length && (
               <div className="flex flex-wrap gap-2 mb-6">
-                {data.tags.map(t => (
+                {tags.map(t => (
                   <span
                     key={t}
                     className="text-[11px] px-2 py-1 rounded-full border"
@@ -194,13 +206,10 @@ export default function RecipePage() {
                 <dl className="grid grid-cols-2 gap-y-2 text-sm">
                   <dt className="text-gray-600 dark:text-gray-300">Kalorie</dt>
                   <dd className="text-right font-semibold">{fmtNum(perServing?.kcal)} kcal</dd>
-
                   <dt className="text-gray-600 dark:text-gray-300">Węgle</dt>
                   <dd className="text-right">{fmtNum(perServing?.carbs, 1)} g</dd>
-
                   <dt className="text-gray-600 dark:text-gray-300">Białko</dt>
                   <dd className="text-right">{fmtNum(perServing?.protein, 1)} g</dd>
-
                   <dt className="text-gray-600 dark:text-gray-300">Tłuszcz</dt>
                   <dd className="text-right">{fmtNum(perServing?.fat, 1)} g</dd>
                 </dl>
@@ -211,26 +220,23 @@ export default function RecipePage() {
                 <dl className="grid grid-cols-2 gap-y-2 text-sm">
                   <dt className="text-gray-600 dark:text-gray-300">Kalorie</dt>
                   <dd className="text-right font-semibold">{fmtNum(per100?.kcal)} kcal</dd>
-
                   <dt className="text-gray-600 dark:text-gray-300">Węgle</dt>
                   <dd className="text-right">{fmtNum(per100?.carbs, 1)} g</dd>
-
                   <dt className="text-gray-600 dark:text-gray-300">Białko</dt>
                   <dd className="text-right">{fmtNum(per100?.protein, 1)} g</dd>
-
                   <dt className="text-gray-600 dark:text-gray-300">Tłuszcz</dt>
                   <dd className="text-right">{fmtNum(per100?.fat, 1)} g</dd>
                 </dl>
               </section>
             </div>
 
-            {/* Składniki */}
+            {/* Składniki — mniejsze fonty + ilość po lewej */}
             <section className="mb-8">
-              <h2 className="font-medium mb-3">Składniki</h2>
-              <ul className="text-sm text-gray-800 dark:text-gray-100 space-y-1">
+              <h2 className="font-medium mb-3" style={{ color: '#111827' }}>Składniki</h2>
+              <ul className="text-[13px] text-gray-800 dark:text-gray-100 space-y-1">
                 {data.ingredients.map((i, idx) => (
                   <li key={idx} className="flex justify-between gap-3">
-                    <span className="text-gray-600 dark:text-gray-300 shrink-0">
+                    <span className="text-gray-600 dark:text-gray-300 shrink-0 text-[12px]">
                       {i.quantity}{i.unit ? ` ${i.unit}` : ''}
                     </span>
                     <span className="min-w-0 text-right">{i.name}</span>
@@ -242,7 +248,7 @@ export default function RecipePage() {
             {/* Instrukcje */}
             {!!(data.instructions && data.instructions.length) && (
               <section className="mb-12">
-                <h2 className="font-medium mb-3">Przygotowanie</h2>
+                <h2 className="font-medium mb-3" style={{ color: '#111827' }}>Przygotowanie</h2>
                 <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-800 dark:text-gray-100">
                   {data.instructions.map((step, idx) => (
                     <li key={idx} className="whitespace-pre-line">{step}</li>

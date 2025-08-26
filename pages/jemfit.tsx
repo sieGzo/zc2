@@ -16,6 +16,11 @@ interface Recipe {
   tags?: string[] | null
   image?: string | null
   nutrition?: Nutrition
+  // możliwe alternatywne źródła tagów (często tak bywa w feedach)
+  cuisine?: string | string[] | null
+  course?: string | string[] | null
+  category?: string | string[] | null
+  meal_type?: string | string[] | null
 }
 
 interface ApiResponse { items: Recipe[]; total: number }
@@ -24,6 +29,7 @@ const BRAND_RED = '#A21F1A'
 const BRAND_GREEN = '#125D49'
 const BLUR_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='
 
+// kcal helper
 function getKcal(nutrition: Nutrition): number | undefined {
   if (!nutrition) return undefined
   if (Array.isArray(nutrition)) {
@@ -31,6 +37,30 @@ function getKcal(nutrition: Nutrition): number | undefined {
   }
   const n = nutrition as { kcal?: number; calories_kcal?: number }
   return typeof n.kcal === 'number' ? n.kcal : n.calories_kcal
+}
+
+// >>> Normalizacja tagów (działa nawet bez r.tags)
+function toArr(x: unknown): string[] {
+  if (Array.isArray(x)) return x.map(String)
+  if (typeof x === 'string') return x.split(/[;,/]/).map(s=>s.trim()).filter(Boolean)
+  return []
+}
+function normTag(s: string) {
+  const t = s.trim()
+  if (!t) return ''
+  // kapitalizacja „ładna”, bez krzyku
+  return t.slice(0,1).toUpperCase() + t.slice(1)
+}
+function getTags(r: Recipe): string[] {
+  const raw = [
+    ...(r.tags || []),
+    ...toArr(r.cuisine),
+    ...toArr(r.course),
+    ...toArr(r.category),
+    ...toArr(r.meal_type),
+  ]
+  const clean = Array.from(new Set(raw.map(normTag).filter(Boolean)))
+  return clean
 }
 
 export default function JemfitList() {
@@ -68,8 +98,7 @@ export default function JemfitList() {
         return r.json() as Promise<ApiResponse>
       })
       .then(d => { if (!cancelled) setRaw(d.items || []) })
-      .catch(err => {
-        console.warn(err)
+      .catch(() => {
         if (!cancelled) {
           setError('Nie udało się wczytać listy przepisów.')
           setRaw([])
@@ -95,7 +124,8 @@ export default function JemfitList() {
 
   const filtered = useMemo(() => {
     const byFilter = raw.filter(r => {
-      if (selectedTags.length && !selectedTags.every(t => (r.tags||[]).includes(t))) return false
+      const tags = getTags(r)
+      if (selectedTags.length && !selectedTags.every(t => tags.includes(t))) return false
       if (allIngTokens.length) {
         const names = r.ingredients.map(i => (i.name||'').toLowerCase())
         const ok = allIngTokens.every(tok => names.some(n => n.includes(tok)))
@@ -117,7 +147,7 @@ export default function JemfitList() {
     const tagCount: Record<string, number> = {}
     const ingCount: Record<string, number> = {}
     for (const r of filtered) {
-      for (const t of (r.tags||[])) tagCount[t] = (tagCount[t]||0)+1
+      for (const t of getTags(r)) tagCount[t] = (tagCount[t]||0)+1
       for (const i of r.ingredients) {
         const n = (i.name||'').toLowerCase().trim()
         if (n) ingCount[n] = (ingCount[n]||0)+1
@@ -139,7 +169,7 @@ export default function JemfitList() {
     <main className="bg-white dark:bg-gray-900 min-h-screen">
       <Head><title>JemFit — przepisy</title></Head>
 
-      {/* Nagłówek: czysty zielony brand */}
+      {/* Nagłówek: czysty zielony brand, wyrównanie do siatki */}
       <header className="w-full" style={{ background: BRAND_GREEN }}>
         <div className="max-w-6xl mx-auto flex items-center gap-4 p-3">
           <div className="relative h-12 md:h-14 w-auto">
@@ -172,7 +202,7 @@ export default function JemfitList() {
               <option value="ingredients_desc">Więcej składników</option>
             </select>
           </label>
-          <div className="text-sm text-gray-600 dark:text-gray-300 md:ml-auto">
+          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-300 md:ml-auto">
             {error ? 'Błąd wczytywania' : `${filtered.length} / ${raw.length} przepisów`}
           </div>
         </div>
@@ -182,7 +212,7 @@ export default function JemfitList() {
           {/* TAGI */}
           <section className="rounded-2xl border" style={{ borderColor: BRAND_GREEN + '33' }}>
             <button className="w-full flex justify-between items-center px-4 py-3" onClick={() => setTagOpen(o=>!o)}>
-              <h2 className="font-medium">Tagi</h2>
+              <h2 className="font-medium" style={{ color: BRAND_GREEN }}>Tagi</h2>
               <span className="text-sm" style={{ color: BRAND_GREEN }}>{tagOpen ? '−' : '+'}</span>
             </button>
             {tagOpen && (
@@ -194,7 +224,7 @@ export default function JemfitList() {
                       <button
                         key={name}
                         onClick={() => toggleTag(name)}
-                        className="text-xs px-2 py-1 rounded-full border"
+                        className="text-[11px] px-2 py-1 rounded-full border"
                         style={{
                           borderColor: active ? BRAND_GREEN : '#e5e7eb',
                           background: active ? BRAND_GREEN + '10' : 'white',
@@ -208,7 +238,7 @@ export default function JemfitList() {
                   })}
                 </div>
                 {selectedTags.length > 0 && (
-                  <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                  <div className="mt-2 text-[11px] text-gray-600 dark:text-gray-300">
                     Aktywne: {selectedTags.join(', ')} · <button onClick={()=>setSelectedTags([])} className="underline">wyczyść</button>
                   </div>
                 )}
@@ -219,7 +249,7 @@ export default function JemfitList() {
           {/* POPULARNE SKŁADNIKI */}
           <section className="rounded-2xl border" style={{ borderColor: BRAND_RED + '33' }}>
             <button className="w-full flex justify-between items-center px-4 py-3" onClick={() => setIngOpen(o=>!o)}>
-              <h2 className="font-medium">Popularne składniki</h2>
+              <h2 className="font-medium" style={{ color: BRAND_RED }}>Popularne składniki</h2>
               <span className="text-sm" style={{ color: BRAND_RED }}>{ingOpen ? '−' : '+'}</span>
             </button>
             {ingOpen && (
@@ -231,7 +261,7 @@ export default function JemfitList() {
                       <button
                         key={name}
                         onClick={() => toggleIng(name)}
-                        className="text-xs px-2 py-1 rounded-full border"
+                        className="text-[11px] px-2 py-1 rounded-full border"
                         style={{
                           borderColor: active ? BRAND_RED : '#e5e7eb',
                           background: active ? BRAND_RED + '10' : 'white',
@@ -245,7 +275,7 @@ export default function JemfitList() {
                   })}
                 </div>
                 {selectedIngs.length > 0 && (
-                  <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                  <div className="mt-2 text-[11px] text-gray-600 dark:text-gray-300">
                     Aktywne: {selectedIngs.join(', ')} · <button onClick={()=>setSelectedIngs([])} className="underline">wyczyść</button>
                   </div>
                 )}
@@ -259,6 +289,7 @@ export default function JemfitList() {
           {filtered.map(r => {
             const kcal = getKcal(r.nutrition)
             const imgSrc = resolveImg(r)
+            const tags = getTags(r)
             return (
               <article key={r.id} className="rounded-2xl border shadow-sm overflow-hidden bg-white dark:bg-gray-800">
                 <Link href={`/jemfit/${r.id}`} className="group block">
@@ -276,19 +307,20 @@ export default function JemfitList() {
                 </Link>
 
                 <div className="p-4">
-                  <h2 className="font-semibold mb-1 text-lg">
+                  <h2 className="font-semibold mb-1 text-lg text-gray-900 dark:text-gray-100">
                     <Link href={`/jemfit/${r.id}`} className="hover:underline">{r.title}</Link>
                   </h2>
                   {typeof kcal === 'number' && (
-                    <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">
+                    <div className="text-[11px] text-gray-600 dark:text-gray-300 mb-2">
                       ~{Math.round(kcal)} kcal / porcję
                     </div>
                   )}
 
-                  <ul className="text-sm text-gray-800 dark:text-gray-100 space-y-1">
+                  {/* składniki — mniejsze fonty, liczby po lewej */}
+                  <ul className="text-[13px] text-gray-800 dark:text-gray-100 space-y-1">
                     {r.ingredients.map((i, idx) => (
                       <li key={idx} className="flex justify-between gap-3">
-                        <span className="text-gray-600 dark:text-gray-300 shrink-0">
+                        <span className="text-gray-600 dark:text-gray-300 shrink-0 text-[12px]">
                           {i.quantity}{i.unit ? ` ${i.unit}` : ''}
                         </span>
                         <span className="min-w-0 text-right">{i.name}</span>
@@ -296,20 +328,21 @@ export default function JemfitList() {
                     ))}
                   </ul>
 
-                  {!!(r.tags && r.tags.length) && (
+                  {!!tags.length && (
                     <div className="flex flex-wrap gap-2 mt-3">
-                      {r.tags.slice(0, 8).map(t => {
+                      {tags.slice(0, 8).map(t => {
                         const active = selectedTags.includes(t)
                         return (
                           <button
                             key={t}
                             onClick={() => toggleTag(t)}
-                            className="text-[11px] px-2 py-1 rounded-full border"
+                            className="text-[10px] px-2 py-0.5 rounded-full border"
                             style={{
                               borderColor: active ? BRAND_GREEN : '#e5e7eb',
                               background: active ? BRAND_GREEN + '10' : 'white',
                               color: active ? BRAND_GREEN : '#111827'
                             }}
+                            title="Filtruj po tagu"
                           >
                             {t}
                           </button>
