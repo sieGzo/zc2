@@ -8,7 +8,7 @@ interface Recipe {
   id: string
   title: string
   ingredients: Ingredient[]
-  instructions?: string[] | null   // zawsze string[]
+  instructions?: string[] | null
   image?: string | null
 }
 
@@ -30,7 +30,7 @@ export default function RecipeView() {
 
       <header className="border-b">
         <div className="max-w-4xl mx-auto flex items-center gap-4 p-3">
-          <Link href="/jemfit" className="text-sm text-gray-600">← Wróć</Link>
+          <Link href="/jemfit" className="text-sm text-gray-600">← Powrót do przepisów</Link>
           <img src="/jemfit-logo.png" className="h-8" alt="JemFit" />
         </div>
       </header>
@@ -59,9 +59,7 @@ export default function RecipeView() {
         <section>
           <h2 className="font-semibold mb-2">Przygotowanie</h2>
           {recipe.instructions?.length
-            ? <ol className="list-decimal pl-5 space-y-2">
-                {recipe.instructions.map((s, i) => <li key={i}>{s}</li>)}
-              </ol>
+            ? <ol className="list-decimal pl-5 space-y-2">{recipe.instructions.map((s, i) => <li key={i}>{s}</li>)}</ol>
             : <p className="text-gray-600">—</p>
           }
         </section>

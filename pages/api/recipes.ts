@@ -13,7 +13,7 @@ export type Recipe = {
   id: string
   title: string
   ingredients: Ingredient[]
-  instructions?: string[] | null  // <- zawsze string[]
+  instructions?: string[] | null
   nutrition?: { kcal?: number; carbs?: number; protein?: number; fat?: number } | null
   cuisine?: string | null
   prep_time?: string | number | null
@@ -23,7 +23,14 @@ export type Recipe = {
 
 const norm = (s?: string) => (s || '').toLowerCase()
 
-// ---------- tagi (lekko) ----------
+// mapa obrazków lokalnych
+let IMAGE_MAP: Record<string, string> = {}
+try {
+  const p = path.join(process.cwd(), 'public', 'recipes_images.json')
+  if (fs.existsSync(p)) IMAGE_MAP = JSON.parse(fs.readFileSync(p, 'utf8'))
+} catch {}
+
+// --- tagi
 const MEAT = ['kurczak','wołowina','wieprzowina','indyk','łosoś','tuńczyk','ryba']
 const DAIRY = ['mleko','jogurt','śmietana','masło','ser','twaro']
 const GLUTEN = ['mąka','pszen','makaron','pieczywo']
@@ -48,7 +55,6 @@ function autoTags(title: string, ingredients: Ingredient[]): string[] {
   return Array.from(tags)
 }
 
-// ---------- makra ----------
 function normalizeNutrition(n?: Record<string, any> | null) {
   if (!n) return null
   const pick = (keys: string[]) => {
@@ -59,14 +65,13 @@ function normalizeNutrition(n?: Record<string, any> | null) {
     return undefined
   }
   return {
-    kcal: pick(['kcal','calories','energia','energy_kcal']),
-    carbs: pick(['carbs','w','węglowodany','weglowodany','carbohydrates']),
-    protein: pick(['protein','b','białko','bialko']),
-    fat: pick(['fat','t','tłuszcz','tluszcz']),
+    kcal: pick(['kcal','calories','energia']),
+    carbs: pick(['carbs','w','węglowodany']),
+    protein: pick(['protein','b','białko']),
+    fat: pick(['fat','t','tłuszcz']),
   }
 }
 
-// ---------- obrazek ----------
 function extractImage(obj: any): string | null {
   const cands = [
     obj.image, obj.img, obj.photo, obj.image_url, obj.imageUrl, obj.picture,
@@ -76,62 +81,47 @@ function extractImage(obj: any): string | null {
   return null
 }
 
-// ---------- KROKI: zawsze string[] ----------
 function normalizeInstructions(obj: any): string[] | null {
   const candidates = [obj.instructions, obj.steps, obj.directions, obj.opis]
   let src: any = candidates.find(x => !!x)
   if (!src) return null
-
-  // string -> [string]
   if (typeof src === 'string') return [src]
-
-  // array -> zamień obiekty na stringi
   if (Array.isArray(src)) {
-    return src
-      .map((item) => {
-        if (item == null) return null
-        if (typeof item === 'string') return item
-        if (typeof item === 'object') {
-          // najczęstsze: { instruction } | { step } | { text } | { content } | { description }
-          return item.instruction ?? item.step ?? item.text ?? item.content ?? item.description ?? null
-        }
-        return String(item)
-      })
-      .filter(Boolean) as string[]
+    return src.map((item) => {
+      if (!item) return null
+      if (typeof item === 'string') return item
+      if (typeof item === 'object') return item.instruction ?? item.text ?? item.step ?? null
+      return String(item)
+    }).filter(Boolean) as string[]
   }
-
-  // obiekt -> spróbuj zebrać pola tekstowe
   if (typeof src === 'object') {
-    const maybe = src.instruction ?? src.text ?? src.content ?? src.description
-    if (maybe) return [maybe]
+    return [src.instruction ?? src.text ?? src.content ?? src.description].filter(Boolean) as string[]
   }
-
   return null
 }
 
-// ---------- wczytanie ----------
-let CACHE: { items: Recipe[]; facets: { tags: Record<string, number>; ingredients: Record<string, number> } } | null = null
+// cache
+let CACHE: { items: Recipe[] } | null = null
 
 function parseJSONL(filePath: string): Recipe[] {
   const raw = fs.readFileSync(filePath, 'utf8')
-  const items: Recipe[] = []
-  raw.split(/\n+/).filter(Boolean).forEach((line, idx) => {
+  return raw.split(/\n+/).filter(Boolean).map((line, idx) => {
     const obj = JSON.parse(line)
+    const id = obj.id?.toString() ?? String(idx)
     const rec: Recipe = {
-      id: obj.id?.toString() ?? String(idx),
+      id,
       title: obj.title,
       ingredients: Array.isArray(obj.ingredients) ? obj.ingredients : [],
-      instructions: normalizeInstructions(obj),             // <-- FIX
+      instructions: normalizeInstructions(obj),
       nutrition: normalizeNutrition(obj.nutrition ?? null),
       cuisine: obj.cuisine ?? null,
       prep_time: obj.prep_time ?? obj.total_time ?? null,
-      tags: Array.isArray(obj.tags) ? obj.tags : [],
-      image: extractImage(obj),
+      tags: obj.tags ?? [],
+      image: IMAGE_MAP[id] ?? extractImage(obj),
     }
     rec.tags = Array.from(new Set([...(rec.tags ?? []), ...autoTags(rec.title, rec.ingredients)]))
-    items.push(rec)
+    return rec
   })
-  return items
 }
 
 function loadData() {
@@ -139,33 +129,28 @@ function loadData() {
   const filePath = fs.existsSync(path.join(process.cwd(), 'data/jemfit_recipes.jsonl'))
     ? path.join(process.cwd(), 'data/jemfit_recipes.jsonl')
     : '/mnt/data/jemfit_recipes.jsonl'
-  const items = parseJSONL(filePath)
-  const facets = { tags: {} as Record<string, number>, ingredients: {} as Record<string, number> }
-  for (const r of items) {
-    for (const t of r.tags ?? []) facets.tags[t] = (facets.tags[t] || 0) + 1
-    for (const i of r.ingredients) {
-      const n = norm(i.name).trim()
-      if (n) facets.ingredients[n] = (facets.ingredients[n] || 0) + 1
-    }
-  }
-  CACHE = { items, facets }
+  CACHE = { items: parseJSONL(filePath) }
   return CACHE
 }
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { items, facets } = loadData()
+  const { items } = loadData()
 
-  // pojedynczy przepis
   if (req.query.id) {
     const one = items.find(r => r.id === String(req.query.id))
     if (!one) return res.status(404).json({ error: 'not found' })
     return res.json({ item: one })
   }
 
-  // lista (prosta)
-  return res.json({
-    items,
-    facets: { tags: Object.entries(facets.tags), ingredients: Object.entries(facets.ingredients) },
-    total: items.length,
-  })
+  // sortowanie
+  const sort = String(req.query.sort || 'title_asc')
+  let sorted = [...items]
+  switch (sort) {
+    case 'title_asc': sorted.sort((a,b)=>a.title.localeCompare(b.title,'pl')); break
+    case 'title_desc': sorted.sort((a,b)=>b.title.localeCompare(a.title,'pl')); break
+    case 'ingredients_asc': sorted.sort((a,b)=>a.ingredients.length-b.ingredients.length); break
+    case 'ingredients_desc': sorted.sort((a,b)=>b.ingredients.length-a.ingredients.length); break
+  }
+
+  res.json({ items: sorted, total: sorted.length })
 }
