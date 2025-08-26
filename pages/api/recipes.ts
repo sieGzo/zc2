@@ -78,25 +78,61 @@ const toArr = (x: any): string[] => {
   if (typeof x === 'string') return x.split(/[;,/]/).map(s => s.trim()).filter(Boolean)
   return []
 }
-
-const norm = (s: string) => (s ? s.trim() : '')
 const cap = (s: string) => (s ? s.slice(0,1).toUpperCase() + s.slice(1) : '')
 
-const buildTagsFromFeed = (r: any): string[] => {
-  const diet = toArr(r.diet_tags)
-  const cuisine = toArr(r.cuisine)
-  const course = toArr(r.course)
-  // jeśli w przyszłości pojawi się cokolwiek w powyższych polach — trafi do tagów
-  const raw = [...diet, ...cuisine, ...course]
-  return Array.from(new Set(raw.map(cap).filter(Boolean)))
+// ---------- diet inference ----------
+const hasAny = (nameList: string[], needles: string[]) =>
+  needles.some(n => nameList.some(x => x.includes(n)))
+
+const inferDietTags = (r: any): string[] => {
+  const names = Array.isArray(r.ingredients)
+    ? r.ingredients.map((i: any) => String(i?.name || '').toLowerCase())
+    : []
+
+  const glutenWords = ['mąka pszen','pszen','jęczmie','żyto','orkisz','kasza manna','bułka tarta','panierka','makaron','pierogi','ciasto francuskie']
+  const mentionsGluten = hasAny(names, glutenWords)
+  const mentionsOats = hasAny(names, ['owies','płatki ows'])
+  const hasOatsGF = hasAny(names, ['bezglutenowy owies','płatki owsiane bezglutenowe'])
+
+  const dairyWords = ['mleko','jogurt','skyr','ser','masło','śmiet','kefir','maślanka','twaro','ricotta','mozarella','parmezan']
+  const isDairyFree = !hasAny(names, dairyWords)
+
+  const meatFishEggsHoney = ['kurczak','wołow','wieprz','indyk','szynka','boczek','tuńczyk','łosoś','ryba','jaj','białko jaj','miód','żelatyna']
+  const hasAnimal = hasAny(names, meatFishEggsHoney)
+
+  const tags: string[] = []
+  const glutenFree = !mentionsGluten && (!mentionsOats || hasOatsGF)
+  if (glutenFree) tags.push('Bez glutenu')
+
+  const vegan = isDairyFree && !hasAnimal
+  if (vegan) tags.push('Wegańskie')
+
+  const vegetarian = !hasAny(names, ['kurczak','wołow','wieprz','indyk','tuńczyk','łosoś','ryba','szynka','boczek','żelatyna'])
+  if (vegetarian && !vegan) tags.push('Wegetariańskie')
+
+  if (isDairyFree && !vegan) tags.push('Bez nabiału')
+
+  return tags
 }
 
+const buildTagsFromFeed = (r: any): string[] => {
+  const fromFeed = [
+    ...toArr(r.diet_tags),
+    ...toArr(r.cuisine),
+    ...toArr(r.course),
+  ].map(cap).filter(Boolean)
+
+  const inferred = inferDietTags(r)
+  return Array.from(new Set([...fromFeed, ...inferred]))
+}
+
+// ---------- mapping ----------
 const mapIngredients = (arr: any[]): Ingredient[] => {
   if (!Array.isArray(arr)) return []
   return arr
     .sort((a,b) => (a?.order ?? 0) - (b?.order ?? 0))
     .map(i => ({
-      name: norm(String(i?.name ?? '')),
+      name: String(i?.name ?? '').trim(),
       quantity: typeof i?.quantity === 'number' || typeof i?.quantity === 'string' ? i.quantity : null,
       unit: i?.unit ? String(i.unit) : null,
     }))
@@ -116,18 +152,14 @@ const mapSteps = (steps: any[]): string[] => {
 }
 
 const normalizeRecipe = (r: any): Recipe => {
-  const mediaUrl =
-    r?.media?.url ||
-    r?.image ||
-    null
-
+  const mediaUrl = r?.media?.url || r?.image || null
   return {
     id: String(r.id),
     title: String(r.title || '').trim(),
     ingredients: mapIngredients(r.ingredients),
     instructions: mapSteps(r.steps),
     image: mediaUrl,
-    tags: buildTagsFromFeed(r),           // może być pusta tablica – wtedy front nie powinien pokazywać panelu „Tagi”
+    tags: buildTagsFromFeed(r),
     pre_info: r.read_before ?? null,
     pro_tip: r.protip ?? r.fun_fact ?? null,
     nutrition: r.nutrition ?? null,
@@ -137,28 +169,6 @@ const normalizeRecipe = (r: any): Recipe => {
     category: r.category ?? null,
     meal_type: r.meal_type ?? null,
   }
-}
-
-const filterByQuery = (items: Recipe[], q: NextApiRequest['query']) => {
-  let out = items
-
-  const ingredients = typeof q.ingredients === 'string'
-    ? q.ingredients.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
-    : []
-
-  if (ingredients.length) {
-    out = out.filter(rec => {
-      const names = (rec.ingredients || []).map(i => (i.name || '').toLowerCase())
-      return ingredients.every(needle => names.some(n => n.includes(needle)))
-    })
-  }
-
-  const tag = typeof q.tag === 'string' ? q.tag.trim().toLowerCase() : ''
-  if (tag) {
-    out = out.filter(rec => (rec.tags || []).map(t => t.toLowerCase()).includes(tag))
-  }
-
-  return out
 }
 
 // ---------- handler ----------
@@ -174,7 +184,6 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       return
     }
 
-    items = filterByQuery(items, req.query)
     res.status(200).json({ items })
   } catch {
     res.status(500).json({ error: 'Failed to load recipes' })
