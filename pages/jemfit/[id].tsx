@@ -127,6 +127,18 @@ export default function RecipePage({ recipe: raw }: { recipe: RecipeRaw }) {
 
         {/* PRAWA KOLUMNA */}
         <aside className="space-y-6">
+          {/* Logo Jemfit */}
+          <div className="flex justify-center">
+            <Image
+              src="/jemfit-logo.2.png"
+              alt="JemFit logo"
+              width={200}
+              height={80}
+              className="object-contain"
+              priority
+            />
+          </div>
+
           {recipe.nutrition && (
             <div className="card">
               <div className="card-body">
