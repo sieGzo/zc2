@@ -6,8 +6,18 @@ import { useRouter } from 'next/router'
 
 type Ingredient = { name: string; quantity?: string | number | null; unit?: string | null }
 type Macros = { kcal?: number; carbs?: number; protein?: number; fat?: number } | null | undefined
-type NutritionArrayItem = { basis: 'per_serving'; calories_kcal?: number }
-type Nutrition = NutritionArrayItem[] | { kcal?: number; calories_kcal?: number } | null | undefined
+type NutritionArrayItem = {
+  basis: 'per_serving'
+  calories_kcal?: number
+  carbs_g?: number
+  protein_g?: number
+  fat_g?: number
+}
+type Nutrition =
+  | NutritionArrayItem[]
+  | { kcal?: number; calories_kcal?: number; carbs?: number; protein?: number; fat?: number }
+  | null
+  | undefined
 
 interface Recipe {
   id: string
@@ -18,8 +28,8 @@ interface Recipe {
   tags?: string[] | null
   pre_info?: string | null
   pro_tip?: string | null
-  nutrition?: Nutrition             // na porcję (stary/nowy format)
-  nutrition100?: Macros             // na 100 g (nowy format)
+  nutrition?: Nutrition
+  nutrition100?: Macros
   cuisine?: string | string[] | null
   course?: string | string[] | null
   category?: string | string[] | null
@@ -30,22 +40,32 @@ const BRAND_RED = '#A21F1A'
 const BRAND_GREEN = '#125D49'
 const BLUR_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='
 
-function kcalFromNutrition(nutrition: Nutrition): number | undefined {
-  if (!nutrition) return undefined
-  if (Array.isArray(nutrition)) return nutrition.find(n => n.basis === 'per_serving')?.calories_kcal
-  const o = nutrition as { kcal?: number; calories_kcal?: number }
-  return typeof o.kcal === 'number' ? o.kcal : o.calories_kcal
-}
 function normalizeMacrosPerServing(nutrition: Nutrition): Macros {
-  const kcal = kcalFromNutrition(nutrition)
-  return { kcal: typeof kcal === 'number' ? kcal : undefined, carbs: undefined, protein: undefined, fat: undefined }
+  if (!nutrition) return null
+  if (Array.isArray(nutrition)) {
+    const n = nutrition.find(x => x?.basis === 'per_serving') || nutrition[0]
+    if (!n) return null
+    return {
+      kcal: n.calories_kcal,
+      carbs: n.carbs_g,
+      protein: n.protein_g,
+      fat: n.fat_g,
+    }
+  }
+  const o = nutrition as { kcal?: number; calories_kcal?: number; carbs?: number; protein?: number; fat?: number }
+  return {
+    kcal: typeof o.kcal === 'number' ? o.kcal : o.calories_kcal,
+    carbs: o.carbs,
+    protein: o.protein,
+    fat: o.fat,
+  }
 }
+
 function fmtNum(n?: number | null, digits = 0) {
   if (typeof n !== 'number' || Number.isNaN(n)) return '—'
   return n.toLocaleString('pl-PL', { maximumFractionDigits: digits, minimumFractionDigits: digits })
 }
 
-// tag helper (jak na liście)
 function toArr(x: unknown): string[] {
   if (Array.isArray(x)) return x.map(String)
   if (typeof x === 'string') return x.split(/[;,/]/).map(s=>s.trim()).filter(Boolean)
@@ -71,7 +91,6 @@ export default function RecipePage() {
   const [error, setError] = useState<string | null>(null)
   const [imgMap, setImgMap] = useState<Record<string, string>>({})
 
-  // pobierz przepis
   useEffect(() => {
     if (!id) return
     let cancelled = false
@@ -92,7 +111,6 @@ export default function RecipePage() {
     return () => { cancelled = true }
   }, [id])
 
-  // mapa obrazków
   useEffect(() => {
     let cancelled = false
     fetch('/recipes_images.json')
@@ -112,6 +130,7 @@ export default function RecipePage() {
 
   const perServing: Macros = useMemo(() => normalizeMacrosPerServing(data?.nutrition), [data?.nutrition])
   const per100: Macros = data?.nutrition100
+  const hasPer100 = !!(per100 && (per100.kcal ?? per100.carbs ?? per100.protein ?? per100.fat))
   const tags = getTags(data || ({} as any))
 
   return (
@@ -126,7 +145,7 @@ export default function RecipePage() {
           </Link>
           <div className="ml-auto relative h-10 w-auto">
             <Image
-              src="/jemfit-logo.png"
+              src="/jemfit-logo2.png"
               alt="JemFit"
               width={180}
               height={46}
@@ -150,7 +169,7 @@ export default function RecipePage() {
 
         {data && (
           <>
-            {/* Tytuł + małe zdjęcie po prawej */}
+            {/* Tytuł + obrazek */}
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
               <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{data.title}</h1>
               <div className="relative w-full sm:w-56 h-40 sm:h-40 rounded-xl overflow-hidden border">
@@ -199,41 +218,35 @@ export default function RecipePage() {
               </div>
             )}
 
-            {/* Makra / kalorie */}
-            <div className="grid sm:grid-cols-2 gap-4 mb-8">
+            {/* Makra */}
+            <div className={`grid gap-4 ${hasPer100 ? 'sm:grid-cols-2' : 'sm:grid-cols-1'} mb-8`}>
               <section className="rounded-2xl border p-4" style={{ borderColor: BRAND_GREEN + '33' }}>
                 <h3 className="font-medium mb-3" style={{ color: BRAND_GREEN }}>Na porcję</h3>
                 <dl className="grid grid-cols-2 gap-y-2 text-sm">
-                  <dt className="text-gray-600 dark:text-gray-300">Kalorie</dt>
-                  <dd className="text-right font-semibold">{fmtNum(perServing?.kcal)} kcal</dd>
-                  <dt className="text-gray-600 dark:text-gray-300">Węgle</dt>
-                  <dd className="text-right">{fmtNum(perServing?.carbs, 1)} g</dd>
-                  <dt className="text-gray-600 dark:text-gray-300">Białko</dt>
-                  <dd className="text-right">{fmtNum(perServing?.protein, 1)} g</dd>
-                  <dt className="text-gray-600 dark:text-gray-300">Tłuszcz</dt>
-                  <dd className="text-right">{fmtNum(perServing?.fat, 1)} g</dd>
+                  <dt>Kalorie</dt><dd className="text-right font-semibold">{fmtNum(perServing?.kcal)} kcal</dd>
+                  <dt>Węgle</dt><dd className="text-right">{fmtNum(perServing?.carbs, 1)} g</dd>
+                  <dt>Białko</dt><dd className="text-right">{fmtNum(perServing?.protein, 1)} g</dd>
+                  <dt>Tłuszcz</dt><dd className="text-right">{fmtNum(perServing?.fat, 1)} g</dd>
                 </dl>
               </section>
 
-              <section className="rounded-2xl border p-4" style={{ borderColor: BRAND_RED + '33' }}>
-                <h3 className="font-medium mb-3" style={{ color: BRAND_RED }}>Na 100 g</h3>
-                <dl className="grid grid-cols-2 gap-y-2 text-sm">
-                  <dt className="text-gray-600 dark:text-gray-300">Kalorie</dt>
-                  <dd className="text-right font-semibold">{fmtNum(per100?.kcal)} kcal</dd>
-                  <dt className="text-gray-600 dark:text-gray-300">Węgle</dt>
-                  <dd className="text-right">{fmtNum(per100?.carbs, 1)} g</dd>
-                  <dt className="text-gray-600 dark:text-gray-300">Białko</dt>
-                  <dd className="text-right">{fmtNum(per100?.protein, 1)} g</dd>
-                  <dt className="text-gray-600 dark:text-gray-300">Tłuszcz</dt>
-                  <dd className="text-right">{fmtNum(per100?.fat, 1)} g</dd>
-                </dl>
-              </section>
+              {hasPer100 && (
+                <section className="rounded-2xl border p-4" style={{ borderColor: BRAND_RED + '33' }}>
+                  <h3 className="font-medium mb-3" style={{ color: BRAND_RED }}>Na 100 g</h3>
+                  <dl className="grid grid-cols-2 gap-y-2 text-sm">
+                    <dt>Kalorie</dt><dd className="text-right font-semibold">{fmtNum(per100?.kcal)} kcal</dd>
+                    <dt>Węgle</dt><dd className="text-right">{fmtNum(per100?.carbs, 1)} g</dd>
+                    <dt>Białko</dt><dd className="text-right">{fmtNum(per100?.protein, 1)} g</dd>
+                    <dt>Tłuszcz</dt><dd className="text-right">{fmtNum(per100?.fat, 1)} g</dd>
+                  </dl>
+                </section>
+              )}
             </div>
 
-            {/* Składniki — mniejsze fonty + ilość po lewej */}
+            {/* Składniki */}
             <section className="mb-8">
-              <h2 className="font-medium mb-3" style={{ color: '#111827' }}>Składniki</h2>
-              <ul className="text-[13px] text-gray-800 dark:text-gray-100 space-y-1">
+              <h2 className="font-medium mb-3">Składniki</h2>
+              <ul className="text-[13px] space-y-1">
                 {data.ingredients.map((i, idx) => (
                   <li key={idx} className="flex justify-between gap-3">
                     <span className="text-gray-600 dark:text-gray-300 shrink-0 text-[12px]">
@@ -248,8 +261,8 @@ export default function RecipePage() {
             {/* Instrukcje */}
             {!!(data.instructions && data.instructions.length) && (
               <section className="mb-12">
-                <h2 className="font-medium mb-3" style={{ color: '#111827' }}>Przygotowanie</h2>
-                <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-800 dark:text-gray-100">
+                <h2 className="font-medium mb-3">Przygotowanie</h2>
+                <ol className="list-decimal pl-5 space-y-2 text-sm">
                   {data.instructions.map((step, idx) => (
                     <li key={idx} className="whitespace-pre-line">{step}</li>
                   ))}
