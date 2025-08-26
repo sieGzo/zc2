@@ -1,3 +1,4 @@
+// pages/jemfit.tsx
 import { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
@@ -16,11 +17,20 @@ interface Recipe {
   tags?: string[] | null
   image?: string | null
   nutrition?: Nutrition
-  // możliwe alternatywne źródła tagów (często tak bywa w feedach)
+  // alternatywne źródła tagów (feedy bywają różne)
   cuisine?: string | string[] | null
   course?: string | string[] | null
   category?: string | string[] | null
   meal_type?: string | string[] | null
+  // możliwe aliasy
+  // @ts-ignore
+  tag?: string | string[]
+  // @ts-ignore
+  labels?: string | string[]
+  // @ts-ignore
+  categories?: string | string[]
+  // @ts-ignore
+  category_name?: string | string[]
 }
 
 interface ApiResponse { items: Recipe[]; total: number }
@@ -39,28 +49,30 @@ function getKcal(nutrition: Nutrition): number | undefined {
   return typeof n.kcal === 'number' ? n.kcal : n.calories_kcal
 }
 
-// >>> Normalizacja tagów (działa nawet bez r.tags)
+// --- Normalizacja tagów (zbiera z wielu pól) ---
 function toArr(x: unknown): string[] {
   if (Array.isArray(x)) return x.map(String)
   if (typeof x === 'string') return x.split(/[;,/]/).map(s=>s.trim()).filter(Boolean)
   return []
 }
 function normTag(s: string) {
-  const t = s.trim()
+  const t = (s || '').trim()
   if (!t) return ''
-  // kapitalizacja „ładna”, bez krzyku
   return t.slice(0,1).toUpperCase() + t.slice(1)
 }
 function getTags(r: Recipe): string[] {
   const raw = [
     ...(r.tags || []),
+    ...toArr((r as any).tag),
     ...toArr(r.cuisine),
     ...toArr(r.course),
     ...toArr(r.category),
+    ...toArr((r as any).categories),
+    ...toArr((r as any).category_name),
     ...toArr(r.meal_type),
+    ...toArr((r as any).labels),
   ]
-  const clean = Array.from(new Set(raw.map(normTag).filter(Boolean)))
-  return clean
+  return Array.from(new Set(raw.map(normTag).filter(Boolean)))
 }
 
 export default function JemfitList() {
@@ -143,20 +155,28 @@ export default function JemfitList() {
     return sorted
   }, [raw, selectedTags, allIngTokens, sort])
 
+  // FACETY: tagi liczone z całej listy (żeby nie były puste) + liczba w bieżącym widoku
   const facets = useMemo(() => {
-    const tagCount: Record<string, number> = {}
+    const tagCountAll: Record<string, number> = {}
+    const tagCountFiltered: Record<string, number> = {}
     const ingCount: Record<string, number> = {}
+
+    for (const r of raw) for (const t of getTags(r)) tagCountAll[t] = (tagCountAll[t] || 0) + 1
+    for (const r of filtered) for (const t of getTags(r)) tagCountFiltered[t] = (tagCountFiltered[t] || 0) + 1
     for (const r of filtered) {
-      for (const t of getTags(r)) tagCount[t] = (tagCount[t]||0)+1
       for (const i of r.ingredients) {
         const n = (i.name||'').toLowerCase().trim()
         if (n) ingCount[n] = (ingCount[n]||0)+1
       }
     }
-    const tags = Object.entries(tagCount).sort((a,b)=>b[1]-a[1])
+
+    const tags = Object.keys(tagCountAll)
+      .sort((a,b) => (tagCountAll[b] - tagCountAll[a]))
+      .map(name => [name, tagCountFiltered[name] || 0] as [string, number])
+
     const ings = Object.entries(ingCount).sort((a,b)=>b[1]-a[1])
     return { tags, ings }
-  }, [filtered])
+  }, [raw, filtered])
 
   const resolveImg = (r: Recipe) => {
     const local = imgMap[r.id]
@@ -169,7 +189,7 @@ export default function JemfitList() {
     <main className="bg-white dark:bg-gray-900 min-h-screen">
       <Head><title>JemFit — przepisy</title></Head>
 
-      {/* Nagłówek: czysty zielony brand, wyrównanie do siatki */}
+      {/* Nagłówek */}
       <header className="w-full" style={{ background: BRAND_GREEN }}>
         <div className="max-w-6xl mx-auto flex items-center gap-4 p-3">
           <div className="relative h-12 md:h-14 w-auto">
@@ -220,6 +240,7 @@ export default function JemfitList() {
                 <div className="flex flex-wrap gap-2 max-h-48 overflow-auto pr-1">
                   {facets.tags.map(([name, count]) => {
                     const active = selectedTags.includes(name)
+                    const muted = !active && count === 0
                     return (
                       <button
                         key={name}
@@ -228,9 +249,10 @@ export default function JemfitList() {
                         style={{
                           borderColor: active ? BRAND_GREEN : '#e5e7eb',
                           background: active ? BRAND_GREEN + '10' : 'white',
-                          color: active ? BRAND_GREEN : '#111827'
+                          color: muted ? '#9ca3af' : (active ? BRAND_GREEN : '#111827'),
+                          opacity: muted ? 0.7 : 1,
                         }}
-                        title={`${count} przepisów`}
+                        title={`${count} w bieżącym widoku`}
                       >
                         {name} <span className="opacity-60">({count})</span>
                       </button>
@@ -328,9 +350,10 @@ export default function JemfitList() {
                     ))}
                   </ul>
 
+                  {/* MINI TAGI */}
                   {!!tags.length && (
                     <div className="flex flex-wrap gap-2 mt-3">
-                      {tags.slice(0, 8).map(t => {
+                      {tags.slice(0, 6).map(t => {
                         const active = selectedTags.includes(t)
                         return (
                           <button
@@ -348,6 +371,11 @@ export default function JemfitList() {
                           </button>
                         )
                       })}
+                      {tags.length > 6 && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full border border-dashed text-gray-600">
+                          +{tags.length - 6}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
