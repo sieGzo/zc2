@@ -23,32 +23,26 @@ export interface Recipe {
   id: string
   title: string
   ingredients: Ingredient[]
-  instructions?: string[] | string | any[] | null
+  instructions?: string[] | null
   image?: string | null
-  tags?: string[] | null
+  tags?: string[]
   pre_info?: string | null
   pro_tip?: string | null
-  nutrition?: Nutrition            // per serving (obsługujemy tablicę i obiekt)
-  nutrition100?: Macros            // per 100 g (opcjonalnie)
+  nutrition?: Nutrition
+  nutrition100?: Macros
   cuisine?: string | string[] | null
   course?: string | string[] | null
   category?: string | string[] | null
   meal_type?: string | string[] | null
 }
 
-// ---------- Helpers ----------
-
-const tryRead = (p: string): string | null => {
-  try {
-    return fs.readFileSync(p, 'utf8')
-  } catch {
-    return null
-  }
+// ---------- helpers ----------
+const tryRead = (p: string) => {
+  try { return fs.readFileSync(p, 'utf8') } catch { return null }
 }
 
 function loadRaw(): any[] {
   const root = process.cwd()
-
   const candidates = [
     path.join(root, 'public', 'jemfit_recipes.jsonl'),
     path.join(root, 'data', 'jemfit_recipes.jsonl'),
@@ -57,103 +51,94 @@ function loadRaw(): any[] {
   ]
 
   for (const file of candidates) {
-    const data = tryRead(file)
-    if (!data) continue
+    const txt = tryRead(file)
+    if (!txt) continue
 
     if (file.endsWith('.jsonl')) {
-      // JSONL: jedna linia = jeden JSON
-      return data
+      return txt
         .split(/\r?\n/)
         .map(l => l.trim())
         .filter(Boolean)
-        .map(l => {
-          try { return JSON.parse(l) } catch { return null }
-        })
+        .map(l => { try { return JSON.parse(l) } catch { return null } })
         .filter(Boolean) as any[]
     }
-
     if (file.endsWith('.json')) {
       try {
-        const parsed = JSON.parse(data)
-        if (Array.isArray(parsed)) return parsed
-        if (parsed && Array.isArray(parsed.items)) return parsed.items
-        return []
-      } catch {
-        return []
-      }
+        const j = JSON.parse(txt)
+        if (Array.isArray(j)) return j
+        if (j && Array.isArray(j.items)) return j.items
+      } catch {}
     }
   }
-
   return []
 }
 
 const toArr = (x: any): string[] => {
   if (Array.isArray(x)) return x.map(String)
-  if (typeof x === 'string') return x.split(/[;,/]/).map((s) => s.trim()).filter(Boolean)
+  if (typeof x === 'string') return x.split(/[;,/]/).map(s => s.trim()).filter(Boolean)
   return []
 }
 
-const normTag = (s: string) => (s ? s.slice(0, 1).toUpperCase() + s.slice(1) : '')
+const norm = (s: string) => (s ? s.trim() : '')
+const cap = (s: string) => (s ? s.slice(0,1).toUpperCase() + s.slice(1) : '')
 
-const buildTags = (r: any): string[] => {
-  const raw = [
-    ...(r.tags ?? []),
-    ...toArr(r.tag),
-    ...toArr(r.cuisine),
-    ...toArr(r.course),
-    ...toArr(r.category),
-    ...toArr(r.categories),
-    ...toArr(r.category_name),
-    ...toArr(r.meal_type),
-    ...toArr(r.labels),
-  ]
-  return Array.from(new Set(raw.map(normTag).filter(Boolean)))
+const buildTagsFromFeed = (r: any): string[] => {
+  const diet = toArr(r.diet_tags)
+  const cuisine = toArr(r.cuisine)
+  const course = toArr(r.course)
+  // jeśli w przyszłości pojawi się cokolwiek w powyższych polach — trafi do tagów
+  const raw = [...diet, ...cuisine, ...course]
+  return Array.from(new Set(raw.map(cap).filter(Boolean)))
 }
 
-const normalizeInstructions = (instr: any): string[] => {
-  if (!instr) return []
-  const pick = (x: any): string => {
-    if (x == null) return ''
-    if (typeof x === 'string') return x.trim()
-    if (typeof x === 'object') {
-      const cand =
-        x.text ?? x.step ?? x.content ?? x.description ??
-        Object.values(x).find(v => typeof v === 'string')
-      return (cand ? String(cand) : '').trim()
-    }
-    return String(x).trim()
-  }
-  if (Array.isArray(instr)) return instr.map(pick).filter(Boolean)
-
-  const s = String(instr)
-  const byLine = s.split(/\r?\n+/).map(x => x.trim()).filter(Boolean)
-  if (byLine.length > 1) return byLine
-
-  return s.split(/\s*(?=\d+\.)/g).map(x => x.replace(/^\d+\.\s*/, '').trim()).filter(Boolean)
+const mapIngredients = (arr: any[]): Ingredient[] => {
+  if (!Array.isArray(arr)) return []
+  return arr
+    .sort((a,b) => (a?.order ?? 0) - (b?.order ?? 0))
+    .map(i => ({
+      name: norm(String(i?.name ?? '')),
+      quantity: typeof i?.quantity === 'number' || typeof i?.quantity === 'string' ? i.quantity : null,
+      unit: i?.unit ? String(i.unit) : null,
+    }))
+    .filter(i => i.name)
 }
 
-const normalizeNutritionPerServing = (nutrition: Nutrition): Macros => {
-  if (!nutrition) return null
-  if (Array.isArray(nutrition)) {
-    const n = nutrition.find(x => x?.basis === 'per_serving') || nutrition[0]
-    if (!n) return null
-    return { kcal: n.calories_kcal, carbs: n.carbs_g, protein: n.protein_g, fat: n.fat_g }
-  }
-  const o = nutrition as { kcal?: number; calories_kcal?: number; carbs?: number; protein?: number; fat?: number }
-  return { kcal: typeof o.kcal === 'number' ? o.kcal : o.calories_kcal, carbs: o.carbs, protein: o.protein, fat: o.fat }
+const mapSteps = (steps: any[]): string[] => {
+  if (!Array.isArray(steps)) return []
+  return steps
+    .sort((a,b) => (a?.order ?? 0) - (b?.order ?? 0))
+    .map(s => {
+      if (typeof s === 'string') return s.trim()
+      const t = s?.instruction ?? s?.text ?? s?.content ?? ''
+      return String(t).trim()
+    })
+    .filter(Boolean)
 }
 
 const normalizeRecipe = (r: any): Recipe => {
+  const mediaUrl =
+    r?.media?.url ||
+    r?.image ||
+    null
+
   return {
-    ...r,
-    instructions: normalizeInstructions(r.instructions),
-    tags: buildTags(r),
-    // per-serving w obiekcie `nutrition` zostawiamy w oryginale — UI ma własny helper,
-    // ale jeśli chcesz, można też dodać pole `nutrition_per_serving` tutaj.
+    id: String(r.id),
+    title: String(r.title || '').trim(),
+    ingredients: mapIngredients(r.ingredients),
+    instructions: mapSteps(r.steps),
+    image: mediaUrl,
+    tags: buildTagsFromFeed(r),           // może być pusta tablica – wtedy front nie powinien pokazywać panelu „Tagi”
+    pre_info: r.read_before ?? null,
+    pro_tip: r.protip ?? r.fun_fact ?? null,
+    nutrition: r.nutrition ?? null,
+    nutrition100: r.nutrition100 ?? null,
+    cuisine: r.cuisine ?? null,
+    course: r.course ?? null,
+    category: r.category ?? null,
+    meal_type: r.meal_type ?? null,
   }
 }
 
-// proste filtry po query (?ingredients=..., ?tag=...)
 const filterByQuery = (items: Recipe[], q: NextApiRequest['query']) => {
   let out = items
 
@@ -170,20 +155,18 @@ const filterByQuery = (items: Recipe[], q: NextApiRequest['query']) => {
 
   const tag = typeof q.tag === 'string' ? q.tag.trim().toLowerCase() : ''
   if (tag) {
-    out = out.filter(rec => (buildTags(rec).map(t => t.toLowerCase()).includes(tag)))
+    out = out.filter(rec => (rec.tags || []).map(t => t.toLowerCase()).includes(tag))
   }
 
   return out
 }
 
-// ---------- Handler ----------
-
+// ---------- handler ----------
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const raw = loadRaw()
     let items: Recipe[] = raw.map(normalizeRecipe)
 
-    // pojedynczy przepis
     const id = typeof req.query.id === 'string' ? req.query.id : ''
     if (id) {
       const item = items.find(r => r.id === id) || null
@@ -191,11 +174,9 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       return
     }
 
-    // opcjonalne filtry
     items = filterByQuery(items, req.query)
-
     res.status(200).json({ items })
-  } catch (e) {
+  } catch {
     res.status(500).json({ error: 'Failed to load recipes' })
   }
 }
