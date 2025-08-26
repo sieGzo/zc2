@@ -2,7 +2,7 @@
 import Head from 'next/head'
 import Image from 'next/image'
 import Link from 'next/link'
-import { GetServerSideProps } from 'next'
+import type { GetServerSideProps } from 'next'
 import fs from 'fs'
 import path from 'path'
 
@@ -132,8 +132,8 @@ export default function RecipePage({ recipe: raw }: { recipe: RecipeRaw }) {
             <Image
               src="/jemfit-logo.2.png"
               alt="JemFit logo"
-              width={200}
-              height={80}
+              width={220}
+              height={88}
               className="object-contain"
               priority
             />
@@ -158,15 +158,84 @@ export default function RecipePage({ recipe: raw }: { recipe: RecipeRaw }) {
   )
 }
 
-// ---- SSR: wczytaj dane z pliku JSONL ----
+// ---- SSR: wczytaj dane z pliku JSONL/JSON (bez 500) ----
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const id = ctx.params?.id as string
-  const filePath = path.join(process.cwd(), 'public', 'data', 'jemfit_recipes.jsonl')
-  const content = fs.readFileSync(filePath, 'utf8')
-  const lines = content.split(/\r?\n/).filter(Boolean)
-  const recipes: RecipeRaw[] = lines.map(l => JSON.parse(l))
-  const recipe = recipes.find(r => r.id === id) || null
+  const id = String(ctx.params?.id || '')
+  const cwd = process.cwd()
 
+  // Spróbuj kilku ścieżek (Vercel/Local) i formatów (JSONL/JSON)
+  const candidates = [
+    path.join(cwd, 'public', 'data', 'jemfit_recipes.jsonl'),
+    path.join(cwd, 'public', 'jemfit_recipes.jsonl'),
+    path.join(cwd, 'public', 'data', 'jemfit_recipes.json'),
+    path.join(cwd, 'public', 'jemfit_recipes.json'),
+  ]
+
+  let content: string | null = null
+  let from: 'jsonl' | 'json' | null = null
+
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) {
+        content = fs.readFileSync(p, 'utf8')
+        from = p.endsWith('.jsonl') ? 'jsonl' : 'json'
+        break
+      }
+    } catch (e) {
+      // pomiń i próbuj dalej
+    }
+  }
+
+  // Fallback: pobierz przez HTTP z /data (działa na Vercel nawet bez fs)
+  if (!content) {
+    try {
+      const host = ctx.req.headers.host
+      const proto = (ctx.req.headers['x-forwarded-proto'] as string) || 'http'
+      const base = `${proto}://${host}`
+      const urls = ['/data/jemfit_recipes.jsonl', '/jemfit_recipes.jsonl', '/data/jemfit_recipes.json', '/jemfit_recipes.json']
+      for (const u of urls) {
+        const res = await fetch(`${base}${u}`)
+        if (res.ok) {
+          content = await res.text()
+          from = u.endsWith('.jsonl') ? 'jsonl' : 'json'
+          break
+        }
+      }
+    } catch {
+      // zignoruj – obsłużymy niżej
+    }
+  }
+
+  if (!content || !from) {
+    // brak danych – pokaż 404 zamiast 500
+    return { notFound: true }
+  }
+
+  let recipes: RecipeRaw[] = []
+  try {
+    if (from === 'jsonl') {
+      recipes = content
+        .split(/\r?\n/)
+        .map(l => l.trim())
+        .filter(Boolean)
+        .map(l => JSON.parse(l))
+    } else {
+      recipes = JSON.parse(content)
+    }
+  } catch (e) {
+    // jeżeli JSON ma śmieci na końcu – przefiltruj po kolei linie
+    try {
+      recipes = content
+        .split(/\r?\n/)
+        .map(l => l.trim())
+        .filter(Boolean)
+        .map(l => JSON.parse(l))
+    } catch {
+      return { notFound: true }
+    }
+  }
+
+  const recipe = recipes.find(r => String(r.id) === id) || null
   if (!recipe) return { notFound: true }
 
   return { props: { recipe } }
