@@ -292,7 +292,7 @@ export default function JemfitList() {
             const tags = getTags(r)
             return (
               <article key={r.id} className="rounded-2xl border shadow-sm overflow-hidden bg-white dark:bg-gray-800">
-                <Link href={`/jemfit/${r.id}`} className="group block">
+                <Link href={`/jemfit/${encodeURIComponent(r.id)}`} className="group block">
                   <div className="relative aspect-[16/9] overflow-hidden">
                     <Image
                       src={imgSrc}
@@ -308,7 +308,7 @@ export default function JemfitList() {
 
                 <div className="p-4">
                   <h2 className="font-semibold mb-1 text-lg text-gray-900 dark:text-gray-100">
-                    <Link href={`/jemfit/${r.id}`} className="hover:underline">{r.title}</Link>
+                    <Link href={`/jemfit/${encodeURIComponent(r.id)}`} className="hover:underline">{r.title}</Link>
                   </h2>
                   {typeof kcal === 'number' && (
                     <div className="text-[11px] text-gray-600 dark:text-gray-300 mb-2">
