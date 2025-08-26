@@ -117,10 +117,33 @@ function normalize(r: any): Recipe {
     : []
 
   // instrukcje / kroki
+  function stepsToStrings(v: any): string[] | null {
+    if (!v) return null
+    if (Array.isArray(v)) {
+      // Posortuj po "order" jeśli jest, a potem wyciągnij tekst kroku
+      const arr = [...v].sort((a, b) => {
+        const ao = typeof a?.order === 'number' ? a.order : 1e9
+        const bo = typeof b?.order === 'number' ? b.order : 1e9
+        return ao - bo
+      }).map(s => {
+        if (typeof s === 'string') return s
+        return String(
+          s?.instruction ?? s?.step ?? s?.text ?? s?.description ?? ''
+        ).trim()
+      }).filter(Boolean)
+      return arr.length ? arr : null
+    }
+    if (typeof v === 'string') {
+      const arr = v.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
+      return arr.length ? arr : null
+    }
+    return null
+  }
+
   const instructions: string[] | null =
-    Array.isArray(r.instructions) ? r.instructions :
-    typeof r.instructions === 'string' ? r.instructions.split(/\r?\n/).map((s: string) => s.trim()).filter(Boolean) :
-    Array.isArray(r.steps) ? r.steps : null
+    stepsToStrings(r.instructions) ??
+    stepsToStrings(r.steps) ??
+    null
 
   // obrazek
   const image = r.image ?? r.photo ?? r.img ?? r.cover ?? null
