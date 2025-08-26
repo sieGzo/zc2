@@ -10,20 +10,18 @@ interface Recipe {
   ingredients: Ingredient[]
   tags?: string[]
   image?: string | null
-  // opcjonalnie – jeżeli w API już zwracasz makra, pokażemy kcal pod tytułem
   nutrition?: { basis: 'per_serving'; calories_kcal?: number }[] | null
 }
 interface ApiResponse { items: Recipe[]; total: number }
 
 const BRAND_RED = '#A21F1A'
 const BRAND_GREEN = '#125D49'
-// 1×1 transparent pixel jako bezpieczny placeholder (żeby nie migało)
-const BLUR_PIXEL =
-  'data:image/gif;base64,R0lGODlhAQABAAAAACw='
+const BLUR_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='
 
 export default function JemfitList() {
   const [raw, setRaw] = useState<Recipe[]>([])
   const [sort, setSort] = useState<'title_asc'|'title_desc'|'ingredients_asc'|'ingredients_desc'>('title_asc')
+  const [error, setError] = useState<string | null>(null)
 
   // wyszukiwarka po składnikach (input -> AND)
   const [ingQuery, setIngQuery] = useState('')
@@ -45,10 +43,22 @@ export default function JemfitList() {
     setSelectedTags(s => s.includes(t) ? s.filter(x=>x!==t) : [...s, t])
 
   useEffect(() => {
+    let cancelled = false
+    setError(null)
     fetch(`/api/recipes?sort=${sort}`)
-      .then(r=>r.json())
-      .then((d:ApiResponse)=>setRaw(d.items||[]))
-      .catch(()=>setRaw([]))
+      .then(async r => {
+        if (!r.ok) throw new Error(`API /api/recipes zwróciło ${r.status}`)
+        return r.json() as Promise<ApiResponse>
+      })
+      .then(d => { if (!cancelled) setRaw(d.items || []) })
+      .catch(err => {
+        console.warn(err)
+        if (!cancelled) {
+          setError('Nie udało się wczytać listy przepisów.')
+          setRaw([])
+        }
+      })
+    return () => { cancelled = true }
   }, [sort])
 
   // wszystkie wybrane składniki = z inputu + z klikniętych „popularnych”
@@ -88,10 +98,20 @@ export default function JemfitList() {
     <main className="bg-white dark:bg-gray-900 min-h-screen">
       <Head><title>JemFit — przepisy</title></Head>
 
+      {/* >>> Większe logo w gradientowym nagłówku (użyjemy /jemfit-logo.2.png) <<< */}
       <header className="w-full" style={{ background: `linear-gradient(90deg, ${BRAND_GREEN}, ${BRAND_RED})` }}>
         <div className="max-w-6xl mx-auto flex items-center gap-4 p-3">
-          <img src="/jemfit-logo.png" alt="JemFit" className="h-8" />
-          <h1 className="text-white font-semibold">Przepisy</h1>
+          <div className="relative h-12 md:h-14 w-auto">
+            <Image
+              src="/jemfit-logo.2.png"
+              alt="JemFit"
+              width={220}
+              height={56}
+              className="h-12 md:h-14 w-auto object-contain"
+              priority
+            />
+          </div>
+          <h1 className="text-white font-semibold text-lg md:text-xl">Przepisy</h1>
         </div>
       </header>
 
@@ -111,7 +131,9 @@ export default function JemfitList() {
               <option value="ingredients_desc">Więcej składników</option>
             </select>
           </label>
-          <div className="text-sm text-gray-600 dark:text-gray-300 md:ml-auto">{filtered.length} / {raw.length} przepisów</div>
+          <div className="text-sm text-gray-600 dark:text-gray-300 md:ml-auto">
+            {error ? 'Błąd wczytywania' : `${filtered.length} / ${raw.length} przepisów`}
+          </div>
         </div>
 
         {/* Facety (accordion) */}
@@ -153,7 +175,7 @@ export default function JemfitList() {
             )}
           </section>
 
-          {/* POPULARNE SKŁADNIKI — toggle jak tagi (NIE zmienia sortowania) */}
+          {/* POPULARNE SKŁADNIKI */}
           <section className="rounded-2xl border" style={{ borderColor: BRAND_RED + '33' }}>
             <button className="w-full flex justify-between items-center px-4 py-3" onClick={() => setIngOpen(o=>!o)}>
               <h2 className="font-medium">Popularne składniki</h2>
@@ -197,7 +219,6 @@ export default function JemfitList() {
             const kcal = r.nutrition?.find(n => n.basis === 'per_serving')?.calories_kcal
             return (
               <article key={r.id} className="rounded-2xl border shadow-sm overflow-hidden bg-white dark:bg-gray-800">
-                {/* >>> KLKALNE ZDJĘCIE (Next/Image) <<< */}
                 <Link href={`/jemfit/${r.id}`} className="group block">
                   <div className="relative aspect-[16/9] overflow-hidden">
                     <Image
@@ -208,7 +229,6 @@ export default function JemfitList() {
                       placeholder="blur"
                       blurDataURL={BLUR_PIXEL}
                       className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      priority={false}
                     />
                   </div>
                 </Link>
@@ -261,9 +281,15 @@ export default function JemfitList() {
           })}
         </div>
 
-        {filtered.length === 0 && (
+        {(!error && filtered.length === 0) && (
           <div className="text-sm text-gray-600 dark:text-gray-300 mt-8">
             Brak wyników. <button className="underline" onClick={()=>{ setIngQuery(''); setSelectedTags([]); setSelectedIngs([]) }}>Wyczyść filtry</button>
+          </div>
+        )}
+
+        {error && (
+          <div className="text-sm text-red-600 dark:text-red-400 mt-8">
+            {error} Sprawdź, czy działa <code>/api/recipes</code>.
           </div>
         )}
       </div>
