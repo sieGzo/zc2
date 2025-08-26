@@ -130,7 +130,7 @@ export default function RecipePage({ recipe: raw }: { recipe: RecipeRaw }) {
           {/* Logo Jemfit */}
           <div className="flex justify-center">
             <Image
-              src="/jemfit-logo.2.png"
+              src="/jemfit-logo2.png"
               alt="JemFit logo"
               width={220}
               height={88}

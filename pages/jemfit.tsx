@@ -103,7 +103,7 @@ export default function JemfitList() {
         <div className="max-w-6xl mx-auto flex items-center gap-4 p-3">
           <div className="relative h-12 md:h-14 w-auto">
             <Image
-              src="/jemfit-logo.2.png"
+              src="/jemfit-logo.png"
               alt="JemFit"
               width={220}
               height={56}
