@@ -245,83 +245,88 @@ export default function RecipeAppView() {
         {data && (
           <>
             {/* Karty: Pro tip + Co wiedzieć */}
-            <div className="grid sm:grid-cols-2 gap-4 mb-6">
-              {data.pro_tip && (
-                <section className="relative rounded-2xl border p-4 overflow-hidden" style={{ borderColor: BRAND_RED + '33' }}>
-                  <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full" style={{ background: BRAND_RED + '10' }} />
-                  <span className="inline-flex items-center gap-2 text-xs font-semibold px-2 py-1 rounded-full mb-2"
-                    style={{ color: BRAND_RED, background: BRAND_RED + '10', border: `1px solid ${BRAND_RED}33` }}>
-                    💡 Pro tip
-                  </span>
-                  <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line">{data.pro_tip}</p>
-                </section>
-              )}
+<div className="grid sm:grid-cols-2 gap-4 mb-6">
+  {data.pro_tip && (
+    <section className="relative rounded-2xl border p-4 overflow-hidden" style={{ borderColor: BRAND_RED + '33' }}>
+      <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full" style={{ background: BRAND_RED + '10' }} />
+      <span className="inline-flex items-center gap-2 text-xs font-semibold px-2 py-1 rounded-full mb-2"
+        style={{ color: BRAND_RED, background: BRAND_RED + '10', border: `1px solid ${BRAND_RED}33` }}>
+        💡 Pro tip
+      </span>
+      <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line">{data.pro_tip}</p>
+    </section>
+  )}
 
-              {preList.length > 0 && (
-                <section className="relative rounded-2xl border p-4 overflow-hidden" style={{ borderColor: BRAND_GREEN + '33' }}>
-                  <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full" style={{ background: BRAND_RED + '10' }} />
-                  <button
-                    className="w-full flex items-center justify-between text-left mb-2"
-                    onClick={() => setShowPreInfo(s => !s)}
-                  >
-                    <span className="font-medium" style={{ color: BRAND_GREEN }}>
-                      Co wiedzieć przed przygotowaniem
-                    </span>
-                    <span className="text-sm" style={{ color: BRAND_GREEN }}>{showPreInfo ? '−' : '+'}</span>
-                  </button>
-                  {showPreInfo && (
-                    <ul className="space-y-2 text-sm">
-                      {preList.map((t, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <span className="mt-[6px] h-1.5 w-1.5 rounded-full" style={{ background: BRAND_GREEN }} />
-                          <span className="text-gray-800 dark:text-gray-100">{t}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
-              )}
-            </div>
+  {preList.length > 0 && (
+    <section className="relative rounded-2xl border p-4 overflow-hidden" style={{ borderColor: BRAND_GREEN + '33' }}>
+      <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full" style={{ background: BRAND_RED + '10' }} />
+      <button
+        className="w-full flex items-center justify-between text-left mb-2"
+        onClick={() => setShowPreInfo(s => !s)}
+      >
+        <span className="font-medium" style={{ color: BRAND_GREEN }}>
+          Co wiedzieć przed przygotowaniem
+        </span>
+        <span className="text-sm" style={{ color: BRAND_GREEN }}>{showPreInfo ? '−' : '+'}</span>
+      </button>
+      {showPreInfo && (
+        <ul className="space-y-2 text-sm">
+          {preList.map((t, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <span className="mt-[6px] h-1.5 w-1.5 rounded-full" style={{ background: BRAND_GREEN }} />
+              <span className="text-gray-800 dark:text-gray-100">{t}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )}
+</div>
 
-            {/* Makra + stepper porcji */}
-            <section className="rounded-2xl border p-4 mb-8" style={{ borderColor: BRAND_GREEN + '33' }}>
-              <div className="flex flex-wrap items-center gap-3 mb-3">
-                <h3 className="font-medium" style={{ color: BRAND_GREEN }}>Porcje i makro</h3>
-                <div className="ml-auto flex items-center gap-2">
-                  <button
-                    className="h-8 w-8 rounded-full border text-lg leading-none"
-                    style={{ borderColor: BRAND_RED, color: BRAND_RED }}
-                    onClick={() => setServings(s => Math.max(1, s - 1))}
-                    aria-label="Mniej porcji"
-                  >−</button>
-                  <div className="min-w-[3rem] text-center font-semibold">{servings}</div>
-                  <button
-                    className="h-8 w-8 rounded-full border text-lg leading-none"
-                    style={{ borderColor: BRAND_RED, color: BRAND_RED }}
-                    onClick={() => setServings(s => Math.min(10, s + 1))}
-                    aria-label="Więcej porcji"
-                  >+</button>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
-                  <div className="opacity-70">Kalorie / porcja</div>
-                  <div className="text-lg font-semibold">{fmtNum(perServing?.kcal)} kcal</div>
-                </div>
-                <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
-                  <div className="opacity-70">Kalorie razem</div>
-                  <div className="text-lg font-semibold">{fmtNum(total?.kcal)} kcal</div>
-                </div>
-                <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
-                  <div className="opacity-70">Białko razem</div>
-                  <div className="text-lg font-semibold">{fmtNum(total?.protein, 1)} g</div>
-                </div>
-                <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
-                  <div className="opacity-70">Węgle razem</div>
-                  <div className="text-lg font-semibold">{fmtNum(total?.carbs, 1)} g</div>
-                </div>
-              </div>
-            </section>
+    {/* Makra + stepper porcji */}
+    <section className="rounded-2xl border p-4 mb-8" style={{ borderColor: BRAND_GREEN + '33' }}>
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <h3 className="font-medium" style={{ color: BRAND_GREEN }}>Porcje i makro</h3>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            className="h-8 w-8 rounded-full border text-lg leading-none"
+            style={{ borderColor: BRAND_RED, color: BRAND_RED }}
+            onClick={() => setServings(s => Math.max(1, s - 1))}
+            aria-label="Mniej porcji"
+          >−</button>
+          <div className="min-w-[3rem] text-center font-semibold">{servings}</div>
+          <button
+            className="h-8 w-8 rounded-full border text-lg leading-none"
+            style={{ borderColor: BRAND_RED, color: BRAND_RED }}
+            onClick={() => setServings(s => Math.min(10, s + 1))}
+            aria-label="Więcej porcji"
+          >+</button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+        <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
+          <div className="opacity-70">Kalorie</div>
+          <div className="text-lg font-semibold">{fmtNum(total?.kcal)} kcal</div>
+          <div className="text-[11px] opacity-60">~{fmtNum(perServing?.kcal)} kcal / porcja</div>
+        </div>
+        <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
+          <div className="opacity-70">Białko</div>
+          <div className="text-lg font-semibold">{fmtNum(total?.protein, 1)} g</div>
+          <div className="text-[11px] opacity-60">~{fmtNum(perServing?.protein, 1)} g / porcja</div>
+        </div>
+        <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
+          <div className="opacity-70">Węgle</div>
+          <div className="text-lg font-semibold">{fmtNum(total?.carbs, 1)} g</div>
+          <div className="text-[11px] opacity-60">~{fmtNum(perServing?.carbs, 1)} g / porcja</div>
+        </div>
+        <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
+          <div className="opacity-70">Tłuszcz</div>
+          <div className="text-lg font-semibold">{fmtNum(total?.fat, 1)} g</div>
+          <div className="text-[11px] opacity-60">~{fmtNum(perServing?.fat, 1)} g / porcja</div>
+        </div>
+      </div>
+    </section>
 
             {/* Składniki */}
             <section className="mb-8">
