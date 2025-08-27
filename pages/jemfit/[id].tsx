@@ -102,11 +102,32 @@ function normalizeInstructions(instr?: string[] | string | any[] | null): string
 }
 
 // pre_info → lista (dzieli także „kropkaBezSpacji” i myślniki)
-function preInfoToItems(txt?: string | null): string[] {
-  if (!txt) return []
-  const s = txt
+// pre_info → lista (dzieli też „kropkaBezSpacji” i myślniki)
+function preInfoToItems(txt?: unknown): string[] {
+  if (txt == null) return []
+
+  // Wyciągnij tekst niezależnie od formatu
+  const pick = (x: any): string => {
+    if (x == null) return ''
+    if (typeof x === 'string') return x
+    if (typeof x === 'object') {
+      const cand =
+        x.text ?? x.content ?? x.description ?? x.value ??
+        (Array.isArray(x) ? x.map(pick).join(' ') : '')
+      return typeof cand === 'string' ? cand : ''
+    }
+    return String(x)
+  }
+
+  const base =
+    Array.isArray(txt) ? txt.map(pick).join(' ') :
+    typeof txt === 'string' ? txt :
+    pick(txt)
+
+  const s = base
     .replace(/([a-ząćęłńóśźż])\.([A-ZĄĆĘŁŃÓŚŹŻ])/g, '$1. $2') // kropkaBezSpacji → kropka spacja
     .replace(/\s*[-–—]\s*/g, '. ')                              // myślnik jako separator
+
   return s
     .split(/\.\s+|\n+|•\s+|·\s+|;+\s+|(?<=\.)$/g)
     .map(t => t.trim())
