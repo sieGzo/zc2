@@ -60,23 +60,39 @@ function fmtNum(n?: number | null, digits = 0) {
 }
 
 // 0.5->1/2, 0.33->1/3, 0.25->1/4 itd.
-function formatFraction(n: number): string {
-  const denoms = [2,3,4,5,6,8,10,12,16]
-  for (const d of denoms) {
-    const num = Math.round(n * d)
-    if (num === 0) continue
-    const approx = num / d
-    if (Math.abs(approx - n) < 1e-3) return `${num}/${d}`
+function formatQuantityNumber(n: number): string {
+  // całkowite → wypisz normalnie
+  if (Number.isInteger(n)) return String(n)
+
+  const abs = Math.abs(n)
+
+  // małe ilości → spróbuj ładnych ułamków
+  if (abs < 5) {
+    const denoms = [2, 3, 4, 5, 6, 8, 10, 12, 16]
+    for (const d of denoms) {
+      const num = Math.round(n * d)
+      const approx = num / d
+      if (Math.abs(approx - n) < 1e-3 && num > 0) return `${num}/${d}`
+    }
   }
-  const s = n.toFixed(2).replace('.', ',')
-  return s.replace(/,00$/, '')
+
+  // fallback: maks. 2 miejsca po przecinku, z przecinkiem PL
+  const s = (Math.round(n * 100) / 100).toString().replace('.', ',')
+  return s
 }
-function fmtQty(q?: string | number | null) {
+
+function fmtQty(q?: string | number | null): string {
   if (q == null || q === '') return '—'
-  if (typeof q === 'number') return formatFraction(q)
+
+  // jeżeli oryginał był już ułamkiem w stringu ("1/3") — zostaw
+  if (typeof q === 'string' && q.includes('/')) return q.trim()
+
+  if (typeof q === 'number') return formatQuantityNumber(q)
+
+  // string liczbowy → licz do 2 miejsc, inaczej zwróć jak jest
   const t = q.trim()
   const num = Number(t.replace(',', '.'))
-  if (!Number.isNaN(num) && t.match(/^\d*([.,]\d+)?$/)) return formatFraction(num)
+  if (!Number.isNaN(num) && /^-?\d+([.,]\d+)?$/.test(t)) return formatQuantityNumber(num)
   return t
 }
 
