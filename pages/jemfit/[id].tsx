@@ -55,7 +55,6 @@ function fmtNum(n?: number | null, digits = 0) {
   return n.toLocaleString('pl-PL', { maximumFractionDigits: digits, minimumFractionDigits: digits })
 }
 
-// ułamki elegancko; duże/całkowite zostają liczbami
 function formatQuantityNumber(n: number): string {
   if (Number.isInteger(n)) return String(n)
   const abs = Math.abs(n)
@@ -67,8 +66,7 @@ function formatQuantityNumber(n: number): string {
       if (Math.abs(approx - n) < 1e-3 && num > 0) return `${num}/${d}`
     }
   }
-  const s = (Math.round(n * 100) / 100).toString().replace('.', ',')
-  return s
+  return (Math.round(n * 100) / 100).toString().replace('.', ',')
 }
 function fmtQty(q?: string | number | null): string {
   if (q == null || q === '') return '—'
@@ -121,8 +119,8 @@ function preInfoToItems(txt?: unknown): string[] {
     pick(txt)
 
   const s = base
-    .replace(/([a-ząćęłńóśźż])\.([A-ZĄĆĘŁŃÓŚŹŻ])/g, '$1. $2') // kropkaBezSpacji → kropka spacja
-    .replace(/\s*[-–—]\s*/g, '. ')                              // myślnik jako separator
+    .replace(/([a-ząćęłńóśźż])\.([A-ZĄĆĘŁŃÓŚŹŻ])/g, '$1. $2')
+    .replace(/\s*[-–—]\s*/g, '. ')
 
   return s
     .split(/\.\s+|\n+|•\s+|·\s+|;+\s+|(?<=\.)$/g)
@@ -203,6 +201,29 @@ export default function RecipeAppView() {
       <Head>
         <title>{data?.title ? `${data.title} — JemFit` : 'Przepis — JemFit'}</title>
       </Head>
+
+      {/* Pasek z logo + szybki powrót */}
+      <header className="w-full" style={{ background: BRAND_GREEN }}>
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4 p-3">
+          <div className="relative h-10 w-auto">
+            <Image
+              src="/jemfit-logo.png"
+              alt="JemFit"
+              width={180}
+              height={40}
+              className="h-10 w-auto object-contain"
+              priority
+            />
+          </div>
+          <Link
+            href="/jemfit"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white text-sm"
+            style={{ borderColor: BRAND_GREEN, color: BRAND_GREEN }}
+          >
+            ← Wróć do przepisów
+          </Link>
+        </div>
+      </header>
 
       <div className="max-w-4xl mx-auto p-4">
         {/* TYTUŁ */}
@@ -306,12 +327,13 @@ export default function RecipeAppView() {
                   </span>
                   <span className="text-sm" style={{ color: BRAND_GREEN }}>{showPreInfo ? '−' : '+'}</span>
                 </button>
+
+                {/* Zamiast sztucznych kropek: natywna lista */}
                 {showPreInfo && (
-                  <ul className="space-y-2 text-sm">
+                  <ul className="list-disc pl-5 space-y-2 text-sm">
                     {preList.map((t, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span className="mt-[6px] h-1.5 w-1.5 rounded-full" style={{ background: BRAND_GREEN }} />
-                        <span className="text-gray-800 dark:text-gray-100">{nb(t)}</span>
+                      <li key={i} className="text-gray-800 dark:text-gray-100">
+                        {nb(t)}
                       </li>
                     ))}
                   </ul>
@@ -319,7 +341,7 @@ export default function RecipeAppView() {
               </section>
             )}
 
-            {/* 4) SKŁADNIKI */}
+            {/* 4) SKŁADNIKI — bez numerów, tylko ilość + nazwa */}
             <section className="mb-8">
               <h2 className="font-medium mb-3" style={{ color: BRAND_GREEN }}>Składniki</h2>
               <div className="rounded-2xl border" style={{ borderColor: BRAND_GREEN + '22' }}>
@@ -329,12 +351,6 @@ export default function RecipeAppView() {
                     const unit = i.unit ? ` ${i.unit}` : ''
                     return (
                       <li key={idx} className="flex items-center gap-3 px-4 py-2">
-                        <div
-                          className="h-6 w-6 rounded-full flex items-center justify-center text-xs font-semibold"
-                          style={{ background: BRAND_GREEN + '10', color: BRAND_GREEN, border: `1px solid ${BRAND_GREEN}22` }}
-                        >
-                          {idx + 1}
-                        </div>
                         <span className="text-gray-600 dark:text-gray-300 text-[12px] shrink-0 w-24 text-right">
                           {qty}{unit}
                         </span>
@@ -384,7 +400,7 @@ export default function RecipeAppView() {
               </section>
             )}
 
-            {/* POWRÓT */}
+            {/* POWRÓT (drugi, na dole) */}
             <div className="mt-6">
               <Link
                 href="/jemfit"

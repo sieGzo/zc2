@@ -37,6 +37,7 @@ interface ApiResponse { items: Recipe[]; total?: number }
 const BRAND_RED = '#A21F1A'
 const BRAND_GREEN = '#125D49'
 const BLUR_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='
+const DEFAULT_VISIBLE = 6   // ile składników pokazujemy domyślnie na karcie
 
 // kcal helper
 function getKcal(nutrition: Nutrition): number | undefined {
@@ -47,7 +48,8 @@ function getKcal(nutrition: Nutrition): number | undefined {
   const n = nutrition as { kcal?: number; calories_kcal?: number }
   return typeof n.kcal === 'number' ? n.kcal : n.calories_kcal
 }
-// twarda spacja po jednowyrazowych spójnikach/przyimkach (w, z, i, o, u, a)
+
+// twarda spacja po jednowyrazowych spójnikach/przyimkach
 function nb(s: string) {
   return (s || '').replace(/(^|\s)([wWzZiIoOuUaA])\s+/g, (_, p, l) => p + l + '\u00A0')
 }
@@ -80,12 +82,8 @@ function getTags(r: Recipe): string[] {
 
 // --- Ułamki: 0.5->1/2, 0.33->1/3, 0.25->1/4, 0.2->1/5, 0.125->1/8 itd. ---
 function formatQuantityNumber(n: number): string {
-  // całkowite → wypisz normalnie
   if (Number.isInteger(n)) return String(n)
-
   const abs = Math.abs(n)
-
-  // małe ilości → spróbuj ładnych ułamków
   if (abs < 5) {
     const denoms = [2, 3, 4, 5, 6, 8, 10, 12, 16]
     for (const d of denoms) {
@@ -94,21 +92,12 @@ function formatQuantityNumber(n: number): string {
       if (Math.abs(approx - n) < 1e-3 && num > 0) return `${num}/${d}`
     }
   }
-
-  // fallback: maks. 2 miejsca po przecinku, z przecinkiem PL
-  const s = (Math.round(n * 100) / 100).toString().replace('.', ',')
-  return s
+  return (Math.round(n * 100) / 100).toString().replace('.', ',')
 }
-
 function fmtQty(q?: string | number | null): string {
   if (q == null || q === '') return '—'
-
-  // jeżeli oryginał był już ułamkiem w stringu ("1/3") — zostaw
   if (typeof q === 'string' && q.includes('/')) return q.trim()
-
   if (typeof q === 'number') return formatQuantityNumber(q)
-
-  // string liczbowy → licz do 2 miejsc, inaczej zwróć jak jest
   const t = q.trim()
   const num = Number(t.replace(',', '.'))
   if (!Number.isNaN(num) && /^-?\d+([.,]\d+)?$/.test(t)) return formatQuantityNumber(num)
@@ -196,7 +185,7 @@ export default function JemfitList() {
     return sorted
   }, [raw, selectedTags, allIngTokens, sort])
 
-  // FACETY: tagi liczone z całej listy + liczba w bieżącym widoku
+  // FACETY
   const facets = useMemo(() => {
     const tagCountAll: Record<string, number> = {}
     const tagCountFiltered: Record<string, number> = {}
@@ -206,10 +195,19 @@ export default function JemfitList() {
     for (const r of filtered) for (const t of getTags(r)) tagCountFiltered[t] = (tagCountFiltered[t] || 0) + 1
     for (const r of filtered) {
       for (const i of r.ingredients) {
-        const n = (i.name||'').toLowerCase().trim()
-        if (n) ingCount[n] = (ingCount[n]||0)+1
+        const n = (i.name || '').toLowerCase().trim()
+        // ⬇️ tu była literówka "in gCount"
+        if (n) ingCount[n] = (ingCount[n] || 0) + 1
       }
     }
+
+    const tags = Object.keys(tagCountAll)
+      .sort((a, b) => (tagCountAll[b] - tagCountAll[a]))
+      .map(name => [name, tagCountFiltered[name] || 0] as [string, number])
+
+    const ings = Object.entries(ingCount).sort((a, b) => b[1] - a[1])
+    return { tags, ings }
+  }, [raw, filtered])
 
     const tags = Object.keys(tagCountAll)
       .sort((a,b) => (tagCountAll[b] - tagCountAll[a]))
@@ -373,19 +371,17 @@ export default function JemfitList() {
               </div>
             )}
           </section>
-
-        {/* ←–––––––––––––– DODAJ TO: zamknięcie kontenera Facetów */}
         </div>
 
         {/* Grid kart */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-
           {filtered.map(r => {
             const kcal = getKcal(r.nutrition)
             const imgSrc = resolveImg(r)
             const tags = getTags(r)
             const isOpen = !!expanded[r.id]
-            const visible = isOpen ? r.ingredients : r.ingredients.slice(0, 6)
+            const hasToggle = r.ingredients.length > DEFAULT_VISIBLE
+            const visible = (hasToggle && isOpen) ? r.ingredients : r.ingredients.slice(0, DEFAULT_VISIBLE)
 
             return (
               <article key={r.id} className="rounded-2xl border shadow-sm overflow-hidden bg-white dark:bg-gray-800">
@@ -406,8 +402,7 @@ export default function JemfitList() {
                 <div className="p-4">
                   {/* Tytuł + kcal */}
                   <div className="flex items-baseline justify-between gap-3">
-                    <h2 className="font-semibold mb-1 text-lg"
-                        style={{ color: BRAND_GREEN }}>
+                    <h2 className="font-semibold mb-1 text-lg" style={{ color: BRAND_GREEN }}>
                       <Link href={`/jemfit/${encodeURIComponent(r.id)}`} className="hover:underline">
                         {nb(r.title)}
                       </Link>
@@ -448,14 +443,16 @@ export default function JemfitList() {
                     </div>
                   )}
 
-                  {/* Składniki — zwijane */}
+                  {/* Składniki — zwijane tylko jeśli jest co zwijać */}
                   <div className="mt-2">
-                    <button
-                      className="text-xs underline"
-                      onClick={() => setExpanded(s => ({ ...s, [r.id]: !s[r.id] }))}
-                    >
-                      {isOpen ? 'Ukryj składniki' : 'Pokaż składniki'}
-                    </button>
+                    {hasToggle && (
+                      <button
+                        className="text-xs underline"
+                        onClick={() => setExpanded(s => ({ ...s, [r.id]: !s[r.id] }))}
+                      >
+                        {isOpen ? 'Ukryj składniki' : 'Pokaż składniki'}
+                      </button>
+                    )}
 
                     <ul className="text-[13px] text-gray-800 dark:text-gray-100 space-y-1 mt-2">
                       {visible.map((i, idx) => (
@@ -463,12 +460,13 @@ export default function JemfitList() {
                           <span className="text-gray-600 dark:text-gray-300 shrink-0 text-[12px]">
                             {fmtQty(i.quantity)}{i.unit ? ` ${i.unit}` : ''}
                           </span>
-                          <span className="min-w-0 text-right">{i.name}</span>
+                          <span className="min-w-0 text-right">{nb(i.name || '')}</span>
                         </li>
                       ))}
                     </ul>
 
-                    {!isOpen && r.ingredients.length > visible.length && (
+                    {/* „…i jeszcze X” tylko gdy mamy zwijanie i jesteśmy w trybie skróconym */}
+                    {hasToggle && !isOpen && r.ingredients.length > visible.length && (
                       <div className="mt-1 text-[11px] text-gray-500">
                         …i jeszcze {r.ingredients.length - visible.length} składników
                       </div>
