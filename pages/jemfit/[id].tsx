@@ -30,12 +30,8 @@ interface Recipe {
   tags?: string[] | null
   pre_info?: string | null
   pro_tip?: string | null
-  nutrition?: Nutrition            // per serving (obsługujemy tablicę i obiekt)
+  nutrition?: Nutrition            // per serving
   nutrition100?: Macros            // per 100 g (opcjonalnie)
-  cuisine?: string | string[] | null
-  course?: string | string[] | null
-  category?: string | string[] | null
-  meal_type?: string | string[] | null
 }
 
 const BRAND_RED = '#A21F1A'
@@ -59,44 +55,32 @@ function fmtNum(n?: number | null, digits = 0) {
   return n.toLocaleString('pl-PL', { maximumFractionDigits: digits, minimumFractionDigits: digits })
 }
 
-// 0.5->1/2, 0.33->1/3, 0.25->1/4 itd.
+// ułamki elegancko; duże/całkowite zostają liczbami
 function formatQuantityNumber(n: number): string {
-  // całkowite → wypisz normalnie
   if (Number.isInteger(n)) return String(n)
-
   const abs = Math.abs(n)
-
-  // małe ilości → spróbuj ładnych ułamków
   if (abs < 5) {
-    const denoms = [2, 3, 4, 5, 6, 8, 10, 12, 16]
+    const denoms = [2,3,4,5,6,8,10,12,16]
     for (const d of denoms) {
       const num = Math.round(n * d)
       const approx = num / d
       if (Math.abs(approx - n) < 1e-3 && num > 0) return `${num}/${d}`
     }
   }
-
-  // fallback: maks. 2 miejsca po przecinku, z przecinkiem PL
   const s = (Math.round(n * 100) / 100).toString().replace('.', ',')
   return s
 }
-
 function fmtQty(q?: string | number | null): string {
   if (q == null || q === '') return '—'
-
-  // jeżeli oryginał był już ułamkiem w stringu ("1/3") — zostaw
   if (typeof q === 'string' && q.includes('/')) return q.trim()
-
   if (typeof q === 'number') return formatQuantityNumber(q)
-
-  // string liczbowy → licz do 2 miejsc, inaczej zwróć jak jest
   const t = q.trim()
   const num = Number(t.replace(',', '.'))
   if (!Number.isNaN(num) && /^-?\d+([.,]\d+)?$/.test(t)) return formatQuantityNumber(num)
   return t
 }
 
-// Instrukcje z różnych formatów → tablica stringów
+// Instrukcje → tablica
 function normalizeInstructions(instr?: string[] | string | any[] | null): string[] {
   if (!instr) return []
   const pick = (x: any): string => {
@@ -115,6 +99,23 @@ function normalizeInstructions(instr?: string[] | string | any[] | null): string
   const byLine = s.split(/\r?\n+/).map(x => x.trim()).filter(Boolean)
   if (byLine.length > 1) return byLine
   return s.split(/\s*(?=\d+\.)/g).map(x => x.replace(/^\d+\.\s*/, '').trim()).filter(Boolean)
+}
+
+// pre_info → lista (dzieli także „kropkaBezSpacji” i myślniki)
+function preInfoToItems(txt?: string | null): string[] {
+  if (!txt) return []
+  const s = txt
+    .replace(/([a-ząćęłńóśźż])\.([A-ZĄĆĘŁŃÓŚŹŻ])/g, '$1. $2') // kropkaBezSpacji → kropka spacja
+    .replace(/\s*[-–—]\s*/g, '. ')                              // myślnik jako separator
+  return s
+    .split(/\.\s+|\n+|•\s+|·\s+|;+\s+|(?<=\.)$/g)
+    .map(t => t.trim())
+    .filter(Boolean)
+}
+
+// niełamliwa spacja po jednowyrazowych spójnikach/przyimkach
+function nb(s: string) {
+  return (s || '').replace(/(^|\s)([wWzZiIoOuUaA])\s+/g, (_, p, l) => p + l + '\u00A0')
 }
 
 export default function RecipeAppView() {
@@ -165,8 +166,8 @@ export default function RecipeAppView() {
   }, [data, imgMap])
 
   const perServing: Macros = useMemo(() => normalizeMacrosPerServing(data?.nutrition), [data?.nutrition])
-  const tags = useMemo(() => Array.from(new Set((data?.tags || []).filter(Boolean))), [data?.tags])
   const steps = useMemo(() => normalizeInstructions(data?.instructions), [data?.instructions])
+  const preList = useMemo(() => preInfoToItems(data?.pre_info), [data?.pre_info])
 
   // TOTAL dla X porcji
   const total = useMemo<Macros>(() => {
@@ -184,25 +185,33 @@ export default function RecipeAppView() {
     <main className="bg-white dark:bg-gray-900 min-h-screen">
       <Head><title>{data?.title ? `${data.title} — JemFit` : 'Przepis — JemFit'}</title></Head>
 
-      {/* App-like sticky header */}
-      <header className="sticky top-0 z-20 backdrop-blur bg-white/85 dark:bg-gray-900/85 border-b" style={{ borderColor: BRAND_GREEN + '33' }}>
-        <div className="max-w-4xl mx-auto flex items-center gap-3 px-3 py-2">
-          <Link href="/jemfit" className="rounded-xl px-3 py-1.5 border" style={{ borderColor: BRAND_GREEN, color: BRAND_GREEN }}>
-            ← Lista
-          </Link>
-          <h1 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">{data?.title || 'Przepis'}</h1>
-          <div className="ml-auto relative h-8 w-auto">
+      {/* HERO – pełna szerokość */}
+      {data && (
+        <div className="relative w-full">
+          <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] md:aspect-[21/9]">
             <Image
-              src="/jemfit-logo2.png"
-              alt="JemFit"
-              width={140}
-              height={36}
-              className="h-8 w-auto object-contain"
+              src={imgSrc}
+              alt={data.title}
+              fill
+              sizes="100vw"
+              placeholder="blur"
+              blurDataURL={BLUR_PIXEL}
+              className="object-cover"
               priority
             />
           </div>
+
+          {/* Tytuł w czerwonym na dolnym overlay'u */}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+            <div className="max-w-4xl mx-auto">
+              <h1 className="text-2xl md:text-3xl font-semibold drop-shadow"
+                  style={{ color: BRAND_RED, textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
+                {nb(data.title)}
+              </h1>
+            </div>
+          </div>
         </div>
-      </header>
+      )}
 
       <div className="max-w-4xl mx-auto p-4">
         {error && (
@@ -210,35 +219,15 @@ export default function RecipeAppView() {
             {error} <Link href="/jemfit" className="underline">Wróć do listy</Link>
           </div>
         )}
-
-        {!data && !error && (
-          <div className="text-sm text-gray-600 dark:text-gray-300 mt-4">Wczytywanie…</div>
-        )}
+        {!data && !error && <div className="text-sm text-gray-600 dark:text-gray-300 mt-4">Wczytywanie…</div>}
 
         {data && (
           <>
-            {/* Główny hero: tytuł + miniaturka */}
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{data.title}</h2>
-              <div className="relative w-full sm:w-56 h-40 sm:h-40 rounded-2xl overflow-hidden border" style={{ borderColor: '#e5e7eb' }}>
-                <Image
-                  src={imgSrc}
-                  alt={data.title}
-                  fill
-                  sizes="224px"
-                  placeholder="blur"
-                  blurDataURL={BLUR_PIXEL}
-                  className="object-cover"
-                />
-              </div>
-            </div>
-
-            {/* Pro tip + Co wiedzieć (akordeon) */}
+            {/* Karty: Pro tip + Co wiedzieć */}
             <div className="grid sm:grid-cols-2 gap-4 mb-6">
-              {/* Pro tip – mocniej wyróżniony */}
               {data.pro_tip && (
-                <section className="rounded-2xl border p-4 relative overflow-hidden" style={{ borderColor: BRAND_RED + '33' }}>
-                  <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full" style={{ background: BRAND_RED + '10' }} />
+                <section className="relative rounded-2xl border p-4 overflow-hidden" style={{ borderColor: BRAND_RED + '33' }}>
+                  <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full" style={{ background: BRAND_RED + '10' }} />
                   <span className="inline-flex items-center gap-2 text-xs font-semibold px-2 py-1 rounded-full mb-2"
                     style={{ color: BRAND_RED, background: BRAND_RED + '10', border: `1px solid ${BRAND_RED}33` }}>
                     💡 Pro tip
@@ -247,11 +236,11 @@ export default function RecipeAppView() {
                 </section>
               )}
 
-              {/* Co wiedzieć – rozwijane */}
-              {data.pre_info && (
-                <section className="rounded-2xl border p-4" style={{ borderColor: BRAND_GREEN + '33' }}>
+              {preList.length > 0 && (
+                <section className="relative rounded-2xl border p-4 overflow-hidden" style={{ borderColor: BRAND_GREEN + '33' }}>
+                  <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full" style={{ background: BRAND_RED + '10' }} />
                   <button
-                    className="w-full flex items-center justify-between text-left"
+                    className="w-full flex items-center justify-between text-left mb-2"
                     onClick={() => setShowPreInfo(s => !s)}
                   >
                     <span className="font-medium" style={{ color: BRAND_GREEN }}>
@@ -260,96 +249,104 @@ export default function RecipeAppView() {
                     <span className="text-sm" style={{ color: BRAND_GREEN }}>{showPreInfo ? '−' : '+'}</span>
                   </button>
                   {showPreInfo && (
-                    <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line mt-2">{data.pre_info}</p>
+                    <ul className="space-y-2 text-sm">
+                      {preList.map((t, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="mt-[6px] h-1.5 w-1.5 rounded-full" style={{ background: BRAND_GREEN }} />
+                          <span className="text-gray-800 dark:text-gray-100">{t}</span>
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </section>
               )}
             </div>
 
-            {/* Makra – na porcję + razem dla X porcji */}
-            <div className="grid gap-4 sm:grid-cols-2 mb-8">
-              <section className="rounded-2xl border p-4" style={{ borderColor: BRAND_GREEN + '33' }}>
-                <h3 className="font-medium mb-3" style={{ color: BRAND_GREEN }}>Na porcję</h3>
-                <dl className="grid grid-cols-2 gap-y-2 text-sm">
-                  <dt>Kalorie</dt><dd className="text-right font-semibold">{fmtNum(perServing?.kcal)} kcal</dd>
-                  <dt>Węgle</dt><dd className="text-right">{fmtNum(perServing?.carbs, 1)} g</dd>
-                  <dt>Białko</dt><dd className="text-right">{fmtNum(perServing?.protein, 1)} g</dd>
-                  <dt>Tłuszcz</dt><dd className="text-right">{fmtNum(perServing?.fat, 1)} g</dd>
-                </dl>
-              </section>
-
-              <section className="rounded-2xl border p-4" style={{ borderColor: BRAND_RED + '33' }}>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium" style={{ color: BRAND_RED }}>Razem dla porcji</h3>
-                  <label className="text-sm flex items-center gap-2">
-                    <span>Liczba porcji:</span>
-                    <select
-                      className="rounded-lg border px-2 py-1"
-                      value={servings}
-                      onChange={e => setServings(parseInt(e.target.value) || 1)}
-                    >
-                      {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-                        <option key={n} value={n}>{n}</option>
-                      ))}
-                    </select>
-                  </label>
+            {/* Makra + stepper porcji */}
+            <section className="rounded-2xl border p-4 mb-8" style={{ borderColor: BRAND_GREEN + '33' }}>
+              <div className="flex flex-wrap items-center gap-3 mb-3">
+                <h3 className="font-medium" style={{ color: BRAND_GREEN }}>Porcje i makro</h3>
+                <div className="ml-auto flex items-center gap-2">
+                  <button
+                    className="h-8 w-8 rounded-full border text-lg leading-none"
+                    style={{ borderColor: BRAND_RED, color: BRAND_RED }}
+                    onClick={() => setServings(s => Math.max(1, s - 1))}
+                    aria-label="Mniej porcji"
+                  >−</button>
+                  <div className="min-w-[3rem] text-center font-semibold">{servings}</div>
+                  <button
+                    className="h-8 w-8 rounded-full border text-lg leading-none"
+                    style={{ borderColor: BRAND_RED, color: BRAND_RED }}
+                    onClick={() => setServings(s => Math.min(10, s + 1))}
+                    aria-label="Więcej porcji"
+                  >+</button>
                 </div>
-                <dl className="grid grid-cols-2 gap-y-2 text-sm">
-                  <dt>Kalorie</dt><dd className="text-right font-semibold">{fmtNum(total?.kcal)} kcal</dd>
-                  <dt>Węgle</dt><dd className="text-right">{fmtNum(total?.carbs, 1)} g</dd>
-                  <dt>Białko</dt><dd className="text-right">{fmtNum(total?.protein, 1)} g</dd>
-                  <dt>Tłuszcz</dt><dd className="text-right">{fmtNum(total?.fat, 1)} g</dd>
-                </dl>
-              </section>
-            </div>
-
-            {/* Tagi (jeśli są) */}
-            {!!tags.length && (
-              <div className="flex flex-wrap gap-2 mb-6">
-                {tags.map(t => (
-                  <span
-                    key={t}
-                    className="text-[11px] px-2 py-1 rounded-full border"
-                    style={{ borderColor: BRAND_GREEN, color: BRAND_GREEN, background: BRAND_GREEN + '10' }}
-                  >
-                    {t}
-                  </span>
-                ))}
               </div>
-            )}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
+                  <div className="opacity-70">Kalorie / porcja</div>
+                  <div className="text-lg font-semibold">{fmtNum(perServing?.kcal)} kcal</div>
+                </div>
+                <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
+                  <div className="opacity-70">Kalorie razem</div>
+                  <div className="text-lg font-semibold">{fmtNum(total?.kcal)} kcal</div>
+                </div>
+                <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
+                  <div className="opacity-70">Białko razem</div>
+                  <div className="text-lg font-semibold">{fmtNum(total?.protein, 1)} g</div>
+                </div>
+                <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
+                  <div className="opacity-70">Węgle razem</div>
+                  <div className="text-lg font-semibold">{fmtNum(total?.carbs, 1)} g</div>
+                </div>
+              </div>
+            </section>
 
             {/* Składniki */}
             <section className="mb-8">
-              <h2 className="font-medium mb-3">Składniki</h2>
-              <ul className="text-[13px] space-y-1">
-                {data.ingredients.map((i, idx) => {
-                  const qty = fmtQty(i.quantity)
-                  const unit = i.unit ? ` ${i.unit}` : ''
-                  return (
-                    <li key={idx} className="flex justify-between gap-3">
-                      <span className="text-gray-600 dark:text-gray-300 shrink-0 text-[12px]">
-                        {qty}{unit}
-                      </span>
-                      <span className="min-w-0 text-right">{i.name}</span>
-                    </li>
-                  )
-                })}
-              </ul>
+              <h2 className="font-medium mb-3" style={{ color: BRAND_GREEN }}>Składniki</h2>
+              <div className="rounded-2xl border" style={{ borderColor: BRAND_GREEN + '22' }}>
+                <ul className="divide-y" style={{ borderColor: BRAND_GREEN + '11' }}>
+                  {data.ingredients.map((i, idx) => {
+                    const qty = fmtQty(i.quantity)
+                    const unit = i.unit ? ` ${i.unit}` : ''
+                    return (
+                      <li key={idx} className="flex items-center gap-3 px-4 py-2">
+                        <div className="h-6 w-6 rounded-full flex items-center justify-center text-xs font-semibold"
+                             style={{ background: BRAND_GREEN + '10', color: BRAND_GREEN, border: `1px solid ${BRAND_GREEN}22` }}>
+                          {idx + 1}
+                        </div>
+                        <span className="text-gray-600 dark:text-gray-300 text-[12px] shrink-0 w-24 text-right">
+                          {qty}{unit}
+                        </span>
+                        <span className="min-w-0 text-sm">{i.name}</span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
             </section>
 
             {/* Instrukcje */}
             {steps.length > 0 && (
               <section className="mb-12">
-                <h2 className="font-medium mb-3">Przygotowanie</h2>
-                <ol className="list-decimal pl-5 space-y-2 text-sm">
+                <h2 className="font-medium mb-3" style={{ color: BRAND_GREEN }}>Przygotowanie</h2>
+                <ol className="space-y-3">
                   {steps.map((step, idx) => (
-                    <li key={idx} className="whitespace-pre-line">{step}</li>
+                    <li key={idx} className="relative rounded-xl border p-4 pl-12"
+                        style={{ borderColor: BRAND_GREEN + '22' }}>
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold"
+                           style={{ background: BRAND_RED + '10', color: BRAND_RED, border: `1px solid ${BRAND_RED}22` }}>
+                        {idx + 1}
+                      </div>
+                      <div className="text-sm whitespace-pre-line">{step}</div>
+                    </li>
                   ))}
                 </ol>
               </section>
             )}
 
-            <div className="mt-8">
+            <div className="mt-8 flex gap-3">
               <Link href="/jemfit" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border"
                 style={{ borderColor: BRAND_GREEN, color: BRAND_GREEN }}>
                 ← Wróć do listy
