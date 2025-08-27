@@ -196,7 +196,6 @@ export default function JemfitList() {
     for (const r of filtered) {
       for (const i of r.ingredients) {
         const n = (i.name || '').toLowerCase().trim()
-        // ⬇️ tu była literówka "in gCount"
         if (n) ingCount[n] = (ingCount[n] || 0) + 1
       }
     }
@@ -206,14 +205,6 @@ export default function JemfitList() {
       .map(name => [name, tagCountFiltered[name] || 0] as [string, number])
 
     const ings = Object.entries(ingCount).sort((a, b) => b[1] - a[1])
-    return { tags, ings }
-  }, [raw, filtered])
-
-    const tags = Object.keys(tagCountAll)
-      .sort((a,b) => (tagCountAll[b] - tagCountAll[a]))
-      .map(name => [name, tagCountFiltered[name] || 0] as [string, number])
-
-    const ings = Object.entries(ingCount).sort((a,b)=>b[1]-a[1])
     return { tags, ings }
   }, [raw, filtered])
 
