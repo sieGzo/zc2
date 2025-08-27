@@ -60,7 +60,7 @@ function formatQuantityNumber(n: number): string {
   if (Number.isInteger(n)) return String(n)
   const abs = Math.abs(n)
   if (abs < 5) {
-    const denoms = [2,3,4,5,6,8,10,12,16]
+    const denoms = [2, 3, 4, 5, 6, 8, 10, 12, 16]
     for (const d of denoms) {
       const num = Math.round(n * d)
       const approx = num / d
@@ -101,12 +101,9 @@ function normalizeInstructions(instr?: string[] | string | any[] | null): string
   return s.split(/\s*(?=\d+\.)/g).map(x => x.replace(/^\d+\.\s*/, '').trim()).filter(Boolean)
 }
 
-// pre_info → lista (dzieli także „kropkaBezSpacji” i myślniki)
-// pre_info → lista (dzieli też „kropkaBezSpacji” i myślniki)
+// pre_info → lista (odporna na różne formaty)
 function preInfoToItems(txt?: unknown): string[] {
   if (txt == null) return []
-
-  // Wyciągnij tekst niezależnie od formatu
   const pick = (x: any): string => {
     if (x == null) return ''
     if (typeof x === 'string') return x
@@ -118,7 +115,6 @@ function preInfoToItems(txt?: unknown): string[] {
     }
     return String(x)
   }
-
   const base =
     Array.isArray(txt) ? txt.map(pick).join(' ') :
     typeof txt === 'string' ? txt :
@@ -204,131 +200,120 @@ export default function RecipeAppView() {
 
   return (
     <main className="bg-white dark:bg-gray-900 min-h-screen">
-      <Head><title>{data?.title ? `${data.title} — JemFit` : 'Przepis — JemFit'}</title></Head>
-
-      {/* HERO – pełna szerokość */}
-      {data && (
-        <div className="relative w-full">
-          <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] md:aspect-[21/9]">
-            <Image
-              src={imgSrc}
-              alt={data.title}
-              fill
-              sizes="100vw"
-              placeholder="blur"
-              blurDataURL={BLUR_PIXEL}
-              className="object-cover"
-              priority
-            />
-          </div>
-
-          {/* Tytuł w czerwonym na dolnym overlay'u */}
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
-            <div className="max-w-4xl mx-auto">
-              <h1 className="text-2xl md:text-3xl font-semibold drop-shadow"
-                  style={{ color: BRAND_RED, textShadow: '0 1px 4px rgba(0,0,0,0.4)' }}>
-                {nb(data.title)}
-              </h1>
-            </div>
-          </div>
-        </div>
-      )}
+      <Head>
+        <title>{data?.title ? `${data.title} — JemFit` : 'Przepis — JemFit'}</title>
+      </Head>
 
       <div className="max-w-4xl mx-auto p-4">
+        {/* TYTUŁ */}
+        {data && (
+          <h1 className="text-2xl md:text-3xl font-semibold mb-4" style={{ color: BRAND_RED }}>
+            {nb(data.title)}
+          </h1>
+        )}
+
+        {/* BŁĄD / LOADING */}
         {error && (
           <div className="text-sm text-red-600 dark:text-red-400 mt-4">
             {error} <Link href="/jemfit" className="underline">Wróć do listy</Link>
           </div>
         )}
-        {!data && !error && <div className="text-sm text-gray-600 dark:text-gray-300 mt-4">Wczytywanie…</div>}
+        {!data && !error && (
+          <div className="text-sm text-gray-600 dark:text-gray-300 mt-4">Wczytywanie…</div>
+        )}
 
         {data && (
           <>
-            {/* Karty: Pro tip + Co wiedzieć */}
-<div className="grid sm:grid-cols-2 gap-4 mb-6">
-  {data.pro_tip && (
-    <section className="relative rounded-2xl border p-4 overflow-hidden" style={{ borderColor: BRAND_RED + '33' }}>
-      <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full" style={{ background: BRAND_RED + '10' }} />
-      <span className="inline-flex items-center gap-2 text-xs font-semibold px-2 py-1 rounded-full mb-2"
-        style={{ color: BRAND_RED, background: BRAND_RED + '10', border: `1px solid ${BRAND_RED}33` }}>
-        💡 Pro tip
-      </span>
-      <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line">{data.pro_tip}</p>
-    </section>
-  )}
+            {/* 1) PORCJE & MAKRO */}
+            <section className="rounded-2xl border p-4 mb-6" style={{ borderColor: BRAND_GREEN + '33' }}>
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <h3 className="font-medium" style={{ color: BRAND_GREEN }}>Porcje i makro</h3>
+                <div className="ml-auto flex items-center gap-2">
+                  <button
+                    className="h-8 w-8 rounded-full border text-lg leading-none"
+                    style={{ borderColor: BRAND_RED, color: BRAND_RED }}
+                    onClick={() => setServings(s => Math.max(1, s - 1))}
+                    aria-label="Mniej porcji"
+                  >−</button>
+                  <div className="min-w-[3rem] text-center font-semibold">{servings}</div>
+                  <button
+                    className="h-8 w-8 rounded-full border text-lg leading-none"
+                    style={{ borderColor: BRAND_RED, color: BRAND_RED }}
+                    onClick={() => setServings(s => Math.min(10, s + 1))}
+                    aria-label="Więcej porcji"
+                  >+</button>
+                </div>
+              </div>
 
-  {preList.length > 0 && (
-    <section className="relative rounded-2xl border p-4 overflow-hidden" style={{ borderColor: BRAND_GREEN + '33' }}>
-      <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full" style={{ background: BRAND_RED + '10' }} />
-      <button
-        className="w-full flex items-center justify-between text-left mb-2"
-        onClick={() => setShowPreInfo(s => !s)}
-      >
-        <span className="font-medium" style={{ color: BRAND_GREEN }}>
-          Co wiedzieć przed przygotowaniem
-        </span>
-        <span className="text-sm" style={{ color: BRAND_GREEN }}>{showPreInfo ? '−' : '+'}</span>
-      </button>
-      {showPreInfo && (
-        <ul className="space-y-2 text-sm">
-          {preList.map((t, i) => (
-            <li key={i} className="flex items-start gap-2">
-              <span className="mt-[6px] h-1.5 w-1.5 rounded-full" style={{ background: BRAND_GREEN }} />
-              <span className="text-gray-800 dark:text-gray-100">{t}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  )}
-</div>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm">
+                <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
+                  <div className="opacity-70">Kalorie (porcja)</div>
+                  <div className="text-lg font-semibold">{fmtNum(perServing?.kcal)} kcal</div>
+                </div>
+                <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
+                  <div className="opacity-70">Kalorie (razem)</div>
+                  <div className="text-lg font-semibold">{fmtNum(total?.kcal)} kcal</div>
+                </div>
+                <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
+                  <div className="opacity-70">Białko</div>
+                  <div className="text-lg font-semibold">{fmtNum(total?.protein, 1)} g</div>
+                </div>
+                <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
+                  <div className="opacity-70">Węglowodany</div>
+                  <div className="text-lg font-semibold">{fmtNum(total?.carbs, 1)} g</div>
+                </div>
+                <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
+                  <div className="opacity-70">Tłuszcz</div>
+                  <div className="text-lg font-semibold">{fmtNum(total?.fat, 1)} g</div>
+                </div>
+              </div>
+            </section>
 
-    {/* Makra + stepper porcji */}
-    <section className="rounded-2xl border p-4 mb-8" style={{ borderColor: BRAND_GREEN + '33' }}>
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <h3 className="font-medium" style={{ color: BRAND_GREEN }}>Porcje i makro</h3>
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            className="h-8 w-8 rounded-full border text-lg leading-none"
-            style={{ borderColor: BRAND_RED, color: BRAND_RED }}
-            onClick={() => setServings(s => Math.max(1, s - 1))}
-            aria-label="Mniej porcji"
-          >−</button>
-          <div className="min-w-[3rem] text-center font-semibold">{servings}</div>
-          <button
-            className="h-8 w-8 rounded-full border text-lg leading-none"
-            style={{ borderColor: BRAND_RED, color: BRAND_RED }}
-            onClick={() => setServings(s => Math.min(10, s + 1))}
-            aria-label="Więcej porcji"
-          >+</button>
-        </div>
-      </div>
+            {/* 2) ZDJĘCIE FULL-BLEED (w treści, pod nagłówkiem) */}
+            <section className="mb-6">
+              <div className="relative w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+                <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] md:aspect-[21/9]">
+                  <Image
+                    src={imgSrc}
+                    alt={data.title}
+                    fill
+                    sizes="100vw"
+                    placeholder="blur"
+                    blurDataURL={BLUR_PIXEL}
+                    className="object-cover"
+                    priority
+                  />
+                </div>
+              </div>
+            </section>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-        <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
-          <div className="opacity-70">Kalorie</div>
-          <div className="text-lg font-semibold">{fmtNum(total?.kcal)} kcal</div>
-          <div className="text-[11px] opacity-60">~{fmtNum(perServing?.kcal)} kcal / porcja</div>
-        </div>
-        <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
-          <div className="opacity-70">Białko</div>
-          <div className="text-lg font-semibold">{fmtNum(total?.protein, 1)} g</div>
-          <div className="text-[11px] opacity-60">~{fmtNum(perServing?.protein, 1)} g / porcja</div>
-        </div>
-        <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
-          <div className="opacity-70">Węgle</div>
-          <div className="text-lg font-semibold">{fmtNum(total?.carbs, 1)} g</div>
-          <div className="text-[11px] opacity-60">~{fmtNum(perServing?.carbs, 1)} g / porcja</div>
-        </div>
-        <div className="rounded-xl p-3 border" style={{ borderColor: BRAND_GREEN + '22' }}>
-          <div className="opacity-70">Tłuszcz</div>
-          <div className="text-lg font-semibold">{fmtNum(total?.fat, 1)} g</div>
-          <div className="text-[11px] opacity-60">~{fmtNum(perServing?.fat, 1)} g / porcja</div>
-        </div>
-      </div>
-    </section>
+            {/* 3) CO WIEDZIEĆ (rozwijane) */}
+            {preList.length > 0 && (
+              <section className="relative rounded-2xl border p-4 overflow-hidden mb-6" style={{ borderColor: BRAND_GREEN + '33' }}>
+                <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full" style={{ background: BRAND_RED + '10' }} />
+                <button
+                  className="w-full flex items-center justify-between text-left mb-2"
+                  onClick={() => setShowPreInfo(s => !s)}
+                >
+                  <span className="font-medium" style={{ color: BRAND_GREEN }}>
+                    Co wiedzieć przed przygotowaniem
+                  </span>
+                  <span className="text-sm" style={{ color: BRAND_GREEN }}>{showPreInfo ? '−' : '+'}</span>
+                </button>
+                {showPreInfo && (
+                  <ul className="space-y-2 text-sm">
+                    {preList.map((t, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="mt-[6px] h-1.5 w-1.5 rounded-full" style={{ background: BRAND_GREEN }} />
+                        <span className="text-gray-800 dark:text-gray-100">{t}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            )}
 
-            {/* Składniki */}
+            {/* 4) SKŁADNIKI */}
             <section className="mb-8">
               <h2 className="font-medium mb-3" style={{ color: BRAND_GREEN }}>Składniki</h2>
               <div className="rounded-2xl border" style={{ borderColor: BRAND_GREEN + '22' }}>
@@ -338,8 +323,10 @@ export default function RecipeAppView() {
                     const unit = i.unit ? ` ${i.unit}` : ''
                     return (
                       <li key={idx} className="flex items-center gap-3 px-4 py-2">
-                        <div className="h-6 w-6 rounded-full flex items-center justify-center text-xs font-semibold"
-                             style={{ background: BRAND_GREEN + '10', color: BRAND_GREEN, border: `1px solid ${BRAND_GREEN}22` }}>
+                        <div
+                          className="h-6 w-6 rounded-full flex items-center justify-center text-xs font-semibold"
+                          style={{ background: BRAND_GREEN + '10', color: BRAND_GREEN, border: `1px solid ${BRAND_GREEN}22` }}
+                        >
                           {idx + 1}
                         </div>
                         <span className="text-gray-600 dark:text-gray-300 text-[12px] shrink-0 w-24 text-right">
@@ -353,16 +340,21 @@ export default function RecipeAppView() {
               </div>
             </section>
 
-            {/* Instrukcje */}
+            {/* 5) PRZYGOTOWANIE */}
             {steps.length > 0 && (
-              <section className="mb-12">
+              <section className="mb-10">
                 <h2 className="font-medium mb-3" style={{ color: BRAND_GREEN }}>Przygotowanie</h2>
-                <ol className="space-y-3">
+                <ol className="space-y-4">
                   {steps.map((step, idx) => (
-                    <li key={idx} className="relative rounded-xl border p-4 pl-12"
-                        style={{ borderColor: BRAND_GREEN + '22' }}>
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold"
-                           style={{ background: BRAND_RED + '10', color: BRAND_RED, border: `1px solid ${BRAND_RED}22` }}>
+                    <li
+                      key={idx}
+                      className="relative rounded-xl border p-4 pl-16"
+                      style={{ borderColor: BRAND_GREEN + '22' }}
+                    >
+                      <div
+                        className="absolute left-4 top-4 h-9 w-9 rounded-full flex items-center justify-center text-sm font-semibold"
+                        style={{ background: BRAND_RED + '10', color: BRAND_RED, border: `1px solid ${BRAND_RED}22` }}
+                      >
                         {idx + 1}
                       </div>
                       <div className="text-sm whitespace-pre-line">{step}</div>
@@ -372,9 +364,27 @@ export default function RecipeAppView() {
               </section>
             )}
 
-            <div className="mt-8 flex gap-3">
-              <Link href="/jemfit" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border"
-                style={{ borderColor: BRAND_GREEN, color: BRAND_GREEN }}>
+            {/* 6) PRO TIP NA KOŃCU */}
+            {data.pro_tip && (
+              <section className="relative rounded-2xl border p-4 overflow-hidden mb-8" style={{ borderColor: BRAND_RED + '33' }}>
+                <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full" style={{ background: BRAND_RED + '10' }} />
+                <span
+                  className="inline-flex items-center gap-2 text-xs font-semibold px-2 py-1 rounded-full mb-2"
+                  style={{ color: BRAND_RED, background: BRAND_RED + '10', border: `1px solid ${BRAND_RED}33` }}
+                >
+                  💡 Pro tip
+                </span>
+                <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line">{data.pro_tip}</p>
+              </section>
+            )}
+
+            {/* POWRÓT */}
+            <div className="mt-6">
+              <Link
+                href="/jemfit"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border"
+                style={{ borderColor: BRAND_GREEN, color: BRAND_GREEN }}
+              >
                 ← Wróć do listy
               </Link>
             </div>
