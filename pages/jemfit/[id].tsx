@@ -269,22 +269,28 @@ export default function RecipeAppView() {
               </div>
             </section>
 
-            {/* 2) ZDJĘCIE FULL-BLEED (w treści, pod nagłówkiem) */}
+            {/* 2) ZDJĘCIE — osadzone, ograniczona szerokość */}
             <section className="mb-6">
-              <div className="relative w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
-                <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] md:aspect-[21/9]">
+              <figure className="mx-auto max-w-3xl">
+                <div className="relative w-full aspect-[16/9] rounded-xl overflow-hidden border" style={{ borderColor: BRAND_GREEN + '22' }}>
                   <Image
                     src={imgSrc}
                     alt={data.title}
                     fill
-                    sizes="100vw"
+                    sizes="(min-width: 1280px) 900px, (min-width: 768px) 720px, 100vw"
                     placeholder="blur"
                     blurDataURL={BLUR_PIXEL}
                     className="object-cover"
                     priority
+                    quality={85}
                   />
                 </div>
-              </div>
+                {data.title && (
+                  <figcaption className="mt-2 text-center text-xs text-gray-500">
+                    {nb(data.title)}
+                  </figcaption>
+                )}
+              </figure>
             </section>
 
             {/* 3) CO WIEDZIEĆ (rozwijane) */}
@@ -305,7 +311,7 @@ export default function RecipeAppView() {
                     {preList.map((t, i) => (
                       <li key={i} className="flex items-start gap-2">
                         <span className="mt-[6px] h-1.5 w-1.5 rounded-full" style={{ background: BRAND_GREEN }} />
-                        <span className="text-gray-800 dark:text-gray-100">{t}</span>
+                        <span className="text-gray-800 dark:text-gray-100">{nb(t)}</span>
                       </li>
                     ))}
                   </ul>
@@ -332,7 +338,7 @@ export default function RecipeAppView() {
                         <span className="text-gray-600 dark:text-gray-300 text-[12px] shrink-0 w-24 text-right">
                           {qty}{unit}
                         </span>
-                        <span className="min-w-0 text-sm">{i.name}</span>
+                        <span className="min-w-0 text-sm">{nb(i.name || '')}</span>
                       </li>
                     )
                   })}
@@ -357,7 +363,7 @@ export default function RecipeAppView() {
                       >
                         {idx + 1}
                       </div>
-                      <div className="text-sm whitespace-pre-line">{step}</div>
+                      <div className="text-sm whitespace-pre-line">{nb(step)}</div>
                     </li>
                   ))}
                 </ol>
@@ -374,7 +380,7 @@ export default function RecipeAppView() {
                 >
                   💡 Pro tip
                 </span>
-                <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line">{data.pro_tip}</p>
+                <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line">{nb(data.pro_tip || '')}</p>
               </section>
             )}
 
