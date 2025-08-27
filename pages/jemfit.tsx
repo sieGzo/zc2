@@ -17,12 +17,11 @@ interface Recipe {
   tags?: string[] | null
   image?: string | null
   nutrition?: Nutrition
-  // alternatywne źródła tagów (feedy bywają różne)
   cuisine?: string | string[] | null
   course?: string | string[] | null
   category?: string | string[] | null
   meal_type?: string | string[] | null
-  // możliwe aliasy
+  // aliasy z feedów
   // @ts-ignore
   tag?: string | string[]
   // @ts-ignore
@@ -33,7 +32,7 @@ interface Recipe {
   category_name?: string | string[]
 }
 
-interface ApiResponse { items: Recipe[]; total: number }
+interface ApiResponse { items: Recipe[]; total?: number }
 
 const BRAND_RED = '#A21F1A'
 const BRAND_GREEN = '#125D49'
@@ -75,11 +74,35 @@ function getTags(r: Recipe): string[] {
   return Array.from(new Set(raw.map(normTag).filter(Boolean)))
 }
 
+// --- Ułamki: 0.5->1/2, 0.33->1/3, 0.25->1/4, 0.2->1/5, 0.125->1/8 itd. ---
+function formatFraction(n: number): string {
+  const denoms = [2,3,4,5,6,8,10,12,16]
+  for (const d of denoms) {
+    const num = Math.round(n * d)
+    if (num === 0) continue
+    const approx = num / d
+    if (Math.abs(approx - n) < 1e-3) return `${num}/${d}`
+  }
+  // fallback: 2 miejsca po przecinku, bez „.00”
+  const s = n.toFixed(2)
+  return /,\d{2}$/.test(s.replace('.', ',')) ? s.replace('.', ',') : n.toString().replace('.', ',')
+}
+function fmtQty(q?: string | number | null) {
+  if (q == null || q === '') return '—'
+  if (typeof q === 'number') return formatFraction(q)
+  // jeśli w stringu są kropki po imporcie, zamień na przecinek
+  const t = q.trim()
+  const num = Number(t.replace(',', '.'))
+  if (!Number.isNaN(num) && t.match(/^\d*([.,]\d+)?$/)) return formatFraction(num)
+  return t
+}
+
 export default function JemfitList() {
   const [raw, setRaw] = useState<Recipe[]>([])
   const [sort, setSort] = useState<'title_asc'|'title_desc'|'ingredients_asc'|'ingredients_desc'>('title_asc')
   const [error, setError] = useState<string | null>(null)
   const [imgMap, setImgMap] = useState<Record<string, string>>({})
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({}) // expander składników na kartach
 
   // wyszukiwarka po składnikach (input -> AND)
   const [ingQuery, setIngQuery] = useState('')
@@ -155,7 +178,7 @@ export default function JemfitList() {
     return sorted
   }, [raw, selectedTags, allIngTokens, sort])
 
-  // FACETY: tagi liczone z całej listy (żeby nie były puste) + liczba w bieżącym widoku
+  // FACETY: tagi liczone z całej listy + liczba w bieżącym widoku
   const facets = useMemo(() => {
     const tagCountAll: Record<string, number> = {}
     const tagCountFiltered: Record<string, number> = {}
@@ -312,6 +335,9 @@ export default function JemfitList() {
             const kcal = getKcal(r.nutrition)
             const imgSrc = resolveImg(r)
             const tags = getTags(r)
+            const isOpen = !!expanded[r.id]
+            const visible = isOpen ? r.ingredients : r.ingredients.slice(0, 6)
+
             return (
               <article key={r.id} className="rounded-2xl border shadow-sm overflow-hidden bg-white dark:bg-gray-800">
                 <Link href={`/jemfit/${encodeURIComponent(r.id)}`} className="group block">
@@ -329,30 +355,21 @@ export default function JemfitList() {
                 </Link>
 
                 <div className="p-4">
-                  <h2 className="font-semibold mb-1 text-lg text-gray-900 dark:text-gray-100">
-                    <Link href={`/jemfit/${encodeURIComponent(r.id)}`} className="hover:underline">{r.title}</Link>
-                  </h2>
-                  {typeof kcal === 'number' && (
-                    <div className="text-[11px] text-gray-600 dark:text-gray-300 mb-2">
-                      ~{Math.round(kcal)} kcal / porcję
-                    </div>
-                  )}
-
-                  {/* składniki — mniejsze fonty, liczby po lewej */}
-                  <ul className="text-[13px] text-gray-800 dark:text-gray-100 space-y-1">
-                    {r.ingredients.map((i, idx) => (
-                      <li key={idx} className="flex justify-between gap-3">
-                        <span className="text-gray-600 dark:text-gray-300 shrink-0 text-[12px]">
-                          {i.quantity}{i.unit ? ` ${i.unit}` : ''}
-                        </span>
-                        <span className="min-w-0 text-right">{i.name}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {/* Tytuł + kcal */}
+                  <div className="flex items-baseline justify-between gap-3">
+                    <h2 className="font-semibold mb-1 text-lg text-gray-900 dark:text-gray-100">
+                      <Link href={`/jemfit/${encodeURIComponent(r.id)}`} className="hover:underline">{r.title}</Link>
+                    </h2>
+                    {typeof kcal === 'number' && (
+                      <div className="text-[11px] text-gray-600 dark:text-gray-300">
+                        ~{Math.round(kcal)} kcal / porcję
+                      </div>
+                    )}
+                  </div>
 
                   {/* MINI TAGI */}
                   {!!tags.length && (
-                    <div className="flex flex-wrap gap-2 mt-3">
+                    <div className="flex flex-wrap gap-2 mt-1 mb-2">
                       {tags.slice(0, 6).map(t => {
                         const active = selectedTags.includes(t)
                         return (
@@ -378,6 +395,33 @@ export default function JemfitList() {
                       )}
                     </div>
                   )}
+
+                  {/* Składniki — zwijane */}
+                  <div className="mt-2">
+                    <button
+                      className="text-xs underline"
+                      onClick={() => setExpanded(s => ({ ...s, [r.id]: !s[r.id] }))}
+                    >
+                      {isOpen ? 'Ukryj składniki' : 'Pokaż składniki'}
+                    </button>
+
+                    <ul className="text-[13px] text-gray-800 dark:text-gray-100 space-y-1 mt-2">
+                      {visible.map((i, idx) => (
+                        <li key={idx} className="flex justify-between gap-3">
+                          <span className="text-gray-600 dark:text-gray-300 shrink-0 text-[12px]">
+                            {fmtQty(i.quantity)}{i.unit ? ` ${i.unit}` : ''}
+                          </span>
+                          <span className="min-w-0 text-right">{i.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {!isOpen && r.ingredients.length > visible.length && (
+                      <div className="mt-1 text-[11px] text-gray-500">
+                        …i jeszcze {r.ingredients.length - visible.length} składników
+                      </div>
+                    )}
+                  </div>
                 </div>
               </article>
             )

@@ -116,27 +116,84 @@ const inferDietTags = (r: any): string[] => {
 }
 
 const buildTagsFromFeed = (r: any): string[] => {
+  const toArr = (x: any): string[] =>
+    Array.isArray(x) ? x.map(String) : (typeof x === 'string' ? x.split(/[;,/]/).map(s=>s.trim()).filter(Boolean) : [])
+
+  const cap = (s: string) => (s ? s.slice(0,1).toUpperCase() + s.slice(1) : '')
+
   const fromFeed = [
     ...toArr(r.diet_tags),
     ...toArr(r.cuisine),
     ...toArr(r.course),
   ].map(cap).filter(Boolean)
 
-  const inferred = inferDietTags(r)
-  return Array.from(new Set([...fromFeed, ...inferred]))
+  // --- tagi z tytułu (słówka-klucze) ---
+  const title = String(r.title || '').toLowerCase()
+  const titleMap: [string, string[]][] = [
+    ['Ciasto',      ['ciasto','sernik','biszkopt','brownie','tort']],
+    ['Ciasteczka',  ['ciastecz','ciastka','cookies']],
+    ['Chlebek',     ['chlebek','banana bread','chleb']],
+    ['Placuszki',   ['placusz','racuch']],
+    ['Naleśniki',   ['naleśn','crepes']],
+    ['Sałatka',     ['sałat','salat']],
+    ['Makaron',     ['makaron','pasta']],
+    ['Zupa',        ['zupa','krem z']],
+    ['Śniadanie',   ['omlet','owsian','jajeczn','tost','skyr']],
+    ['Deser',       ['deser','słodk','słodycz','bezy','beziki','meringue']]
+  ]
+  const fromTitle = titleMap
+    .filter(([tag, keys]) => keys.some(k => title.includes(k)))
+    .map(([tag]) => tag)
+
+  return Array.from(new Set([...fromFeed, ...fromTitle]))
 }
 
 // ---------- mapping ----------
 const mapIngredients = (arr: any[]): Ingredient[] => {
-  if (!Array.isArray(arr)) return []
-  return arr
-    .sort((a,b) => (a?.order ?? 0) - (b?.order ?? 0))
-    .map(i => ({
-      name: String(i?.name ?? '').trim(),
-      quantity: typeof i?.quantity === 'number' || typeof i?.quantity === 'string' ? i.quantity : null,
-      unit: i?.unit ? String(i.unit) : null,
-    }))
-    .filter(i => i.name)
+  const out: Ingredient[] = []
+  if (!Array.isArray(arr)) return out
+
+  // rekurencyjne rozwinięcie grup -> płaska lista
+  const walk = (items: any[], ctx?: { spiceMode?: boolean }) => {
+    for (const it of items) {
+      const isGroup = Array.isArray(it?.items) || Array.isArray(it?.children)
+      const groupTitle = String(it?.title || it?.group || '').toLowerCase()
+      const spiceMode = ctx?.spiceMode || /przypraw/.test(groupTitle)
+
+      if (isGroup) {
+        walk((it.items || it.children) as any[], { spiceMode })
+        continue
+      }
+
+      // zwykła pozycja
+      let name = String(it?.name ?? '').trim()
+      let quantity = (typeof it?.quantity === 'number' || typeof it?.quantity === 'string') ? it.quantity : null
+      let unit = it?.unit ? String(it.unit) : null
+
+      // jeżeli „przyprawy” i nazwa ma przecinki -> rozbijamy na osobne
+      if (spiceMode && name.includes(',')) {
+        for (const one of name.split(',').map((s: string) => s.trim()).filter(Boolean)) {
+          out.push({ name: one, quantity: null, unit: null })
+        }
+        continue
+      }
+
+      // czasem autor wrzuca "przyprawy: sól, pieprz" w polu name
+      const nameLower = name.toLowerCase()
+      if (!quantity && !unit && /przypraw/.test(nameLower) && name.includes(',')) {
+        const afterColon = name.split(':').slice(1).join(':') || name
+        for (const one of afterColon.split(',').map(s=>s.trim()).filter(Boolean)) {
+          out.push({ name: one, quantity: null, unit: null })
+        }
+        continue
+      }
+
+      if (name) out.push({ name, quantity, unit })
+    }
+  }
+
+  walk(arr)
+  return out
 }
 
 const mapSteps = (steps: any[]): string[] => {
