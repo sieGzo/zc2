@@ -47,6 +47,10 @@ function getKcal(nutrition: Nutrition): number | undefined {
   const n = nutrition as { kcal?: number; calories_kcal?: number }
   return typeof n.kcal === 'number' ? n.kcal : n.calories_kcal
 }
+// twarda spacja po jednowyrazowych spójnikach/przyimkach (w, z, i, o, u, a)
+function nb(s: string) {
+  return (s || '').replace(/(^|\s)([wWzZiIoOuUaA])\s+/g, (_, p, l) => p + l + '\u00A0')
+}
 
 // --- Normalizacja tagów (zbiera z wielu pól) ---
 function toArr(x: unknown): string[] {
@@ -311,10 +315,38 @@ export default function JemfitList() {
               <h2 className="font-medium" style={{ color: BRAND_RED }}>Popularne składniki</h2>
               <span className="text-sm" style={{ color: BRAND_RED }}>{ingOpen ? '−' : '+'}</span>
             </button>
+
+            {/* PODGLĄD, gdy zamknięte */}
+            {!ingOpen && (
+              <div className="px-4 pb-3 -mt-2">
+                <div className="flex flex-wrap gap-2">
+                  {facets.ings.slice(0, 12).map(([name, count]) => {
+                    const active = selectedIngs.includes(name)
+                    return (
+                      <button
+                        key={name}
+                        onClick={() => toggleIng(name)}
+                        className="text-[11px] px-2 py-1 rounded-full border"
+                        style={{
+                          borderColor: active ? BRAND_RED : '#e5e7eb',
+                          background: active ? BRAND_RED + '10' : 'white',
+                          color: active ? BRAND_RED : '#111827'
+                        }}
+                        title={`${count} przepisów`}
+                      >
+                        {name} <span className="opacity-60">({count})</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Pełna lista, gdy otwarte */}
             {ingOpen && (
               <div className="p-3 pt-0">
                 <div className="flex flex-wrap gap-2 max-h-48 overflow-auto pr-1">
-                  {facets.ings.slice(0,100).map(([name, count]) => {
+                  {facets.ings.map(([name, count]) => {
                     const active = selectedIngs.includes(name)
                     return (
                       <button
@@ -341,10 +373,13 @@ export default function JemfitList() {
               </div>
             )}
           </section>
+
+        {/* ←–––––––––––––– DODAJ TO: zamknięcie kontenera Facetów */}
         </div>
 
         {/* Grid kart */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
           {filtered.map(r => {
             const kcal = getKcal(r.nutrition)
             const imgSrc = resolveImg(r)
@@ -371,8 +406,11 @@ export default function JemfitList() {
                 <div className="p-4">
                   {/* Tytuł + kcal */}
                   <div className="flex items-baseline justify-between gap-3">
-                    <h2 className="font-semibold mb-1 text-lg text-gray-900 dark:text-gray-100">
-                      <Link href={`/jemfit/${encodeURIComponent(r.id)}`} className="hover:underline">{r.title}</Link>
+                    <h2 className="font-semibold mb-1 text-lg"
+                        style={{ color: BRAND_GREEN }}>
+                      <Link href={`/jemfit/${encodeURIComponent(r.id)}`} className="hover:underline">
+                        {nb(r.title)}
+                      </Link>
                     </h2>
                     {typeof kcal === 'number' && (
                       <div className="text-[11px] text-gray-600 dark:text-gray-300">
